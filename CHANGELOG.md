@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.0] - 2026-10-28
 
-First release.
+First release. The package is `docs-sitekit` and the action is `miguelcolmenares/docs-sitekit`. The `sitekit` command is the one you run: `npx docs-sitekit init`.
 
 ### Added
 

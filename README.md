@@ -1,4 +1,4 @@
-# @miguelcolmenares/sitekit
+# docs-sitekit
 
 Documentation sites that look like a product, published to GitHub Pages. A dark design system, a content
 pipeline that reads your repository, and a scaffold you run once with `npx`.
@@ -19,7 +19,7 @@ pipeline that reads your repository, and a scaffold you run once with `npx`.
 Run this in the root of the repository you want to document. It needs Node 22.23.4 or newer.
 
 ```bash
-npx @miguelcolmenares/sitekit init
+npx docs-sitekit init
 cd site && npm ci && npm run dev
 ```
 
@@ -43,7 +43,7 @@ rebuild the site on every release.
 
 ```yaml
 - uses: actions/checkout@v7
-- uses: miguelcolmenares/sitekit@v0.1.0
+- uses: miguelcolmenares/docs-sitekit@v0.1.0
   with:
     version: 0.1.0 # the sitekit CLI that runs `check`
 ```
@@ -72,7 +72,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: miguelcolmenares/sitekit@v0.1.0
+      - uses: miguelcolmenares/docs-sitekit@v0.1.0
         with:
           version: 0.1.0
 
@@ -95,13 +95,13 @@ all it takes. For a package that publishes from a tag, add the same two jobs aft
 
 ### Inputs
 
-| Input          | Default  | What it does                                                                                                     |
-| -------------- | -------- | ---------------------------------------------------------------------------------------------------------------- |
-| `dir`          | `site`   | Folder of the site, relative to the repository root.                                                             |
-| `version`      | `latest` | Version of `@miguelcolmenares/sitekit` that runs `check`. Pin an exact version so every run uses the same rules. |
-| `node-version` | `24`     | Node.js version. A generated site needs 22.23.4 or newer.                                                        |
-| `check`        | `true`   | Run `sitekit check` on the built site and fail on a problem. Turn it off only to debug.                          |
-| `upload`       | `true`   | Upload the built site as the GitHub Pages artifact. Turn it off for a build that is only checked.                |
+| Input          | Default  | What it does                                                                                        |
+| -------------- | -------- | --------------------------------------------------------------------------------------------------- |
+| `dir`          | `site`   | Folder of the site, relative to the repository root.                                                |
+| `version`      | `latest` | Version of `docs-sitekit` that runs `check`. Pin an exact version so every run uses the same rules. |
+| `node-version` | `24`     | Node.js version. A generated site needs 22.23.4 or newer.                                           |
+| `check`        | `true`   | Run `sitekit check` on the built site and fail on a problem. Turn it off only to debug.             |
+| `upload`       | `true`   | Upload the built site as the GitHub Pages artifact. Turn it off for a build that is only checked.   |
 
 ### Outputs
 
