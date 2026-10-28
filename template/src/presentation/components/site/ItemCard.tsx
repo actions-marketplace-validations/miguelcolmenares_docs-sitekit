@@ -3,6 +3,7 @@ import { cn } from "@/infrastructure/cn";
 import { ToneBadge } from "./ToneBadge";
 import type { Tone } from "./ToneBadge";
 
+/** A link card for a catalog: an optional badge, a mono title, a description and a hint. */
 export function ItemCard({
   href,
   title,

@@ -1,9 +1,11 @@
+/** A command, what it does, and an optional note shown on wide screens. */
 export interface CommandRow {
   command: string;
   text: string;
   note?: string;
 }
 
+/** A two-column list of commands and what they do. */
 export function CommandTable({ rows }: { rows: readonly CommandRow[] }) {
   return (
     <ul className="grid grid-cols-1 overflow-hidden rounded-lg border border-border bg-surface md:grid-cols-2">
@@ -14,7 +16,7 @@ export function CommandTable({ rows }: { rows: readonly CommandRow[] }) {
         >
           <code className="shrink-0 font-mono text-sm text-brand">{row.command}</code>
           <span className="min-w-0 flex-1 text-sm text-fg">{row.text}</span>
-          {row.note && <span className="hidden text-xs text-fg-faint lg:inline">{row.note}</span>}
+          {row.note && <span className="hidden text-xs text-fg-dim lg:inline">{row.note}</span>}
         </li>
       ))}
     </ul>

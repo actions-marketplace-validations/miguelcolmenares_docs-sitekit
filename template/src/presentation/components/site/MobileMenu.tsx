@@ -8,6 +8,7 @@ import {
   SheetTrigger,
 } from "../ui/sheet";
 
+/** The navigation as a sheet, shown only below the `md` breakpoint. It traps focus and returns it on close. */
 export function MobileMenu({
   links,
   action,
@@ -21,7 +22,7 @@ export function MobileMenu({
         <button
           type="button"
           aria-label="Open menu"
-          className="inline-flex size-9 items-center justify-center rounded-md text-fg-muted hover:bg-surface-2 hover:text-fg-bright md:hidden"
+          className="inline-flex size-11 items-center justify-center rounded-md text-fg-muted hover:bg-surface-2 hover:text-fg-bright md:hidden"
         >
           <Menu className="size-5" aria-hidden="true" />
         </button>

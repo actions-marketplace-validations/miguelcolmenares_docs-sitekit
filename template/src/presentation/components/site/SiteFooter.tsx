@@ -1,10 +1,12 @@
 import { ArrowUpRight, Box } from "lucide-react";
 
+/** A titled column of footer links. */
 export interface FooterColumn {
   title: string;
   links: readonly { label: string; href: string; external?: boolean }[];
 }
 
+/** The brand, link columns and a legal line, one grid track per column. */
 export function SiteFooter({
   name,
   description,
@@ -47,13 +49,13 @@ export function SiteFooter({
               <h2 className="mb-4 font-mono text-[11px] tracking-[0.14em] text-fg-dim uppercase">
                 {column.title}
               </h2>
-              <ul className="space-y-2.5">
+              <ul className="space-y-0.5">
                 {column.links.map((link) => (
                   <li key={`${link.href}-${link.label}`}>
                     <a
                       href={link.href}
                       {...(link.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-                      className="inline-flex items-center gap-1 text-sm text-fg-muted transition-colors hover:text-fg-bright"
+                      className="inline-flex min-h-11 items-center gap-1 text-sm text-fg-muted transition-colors hover:text-fg-bright md:min-h-8"
                     >
                       {link.label}
                       {link.external && <ArrowUpRight className="size-3.5" aria-hidden="true" />}
@@ -72,7 +74,10 @@ export function SiteFooter({
           {credit && (
             <span>
               {credit.prefix}{" "}
-              <a href={credit.href} className="text-fg-muted hover:text-fg-bright">
+              <a
+                href={credit.href}
+                className="text-fg-muted underline underline-offset-2 hover:text-fg-bright"
+              >
                 {credit.label}
               </a>
             </span>

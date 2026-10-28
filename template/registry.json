@@ -1,0 +1,124 @@
+{
+  "components": {
+    "button": {
+      "description": "Button and buttonVariants, from shadcn/ui.",
+      "files": ["src/presentation/components/ui/button.tsx"],
+      "requires": ["cn"]
+    },
+    "badge": {
+      "description": "Badge, from shadcn/ui.",
+      "files": ["src/presentation/components/ui/badge.tsx"],
+      "requires": ["cn"]
+    },
+    "card": {
+      "description": "Card, from shadcn/ui.",
+      "files": ["src/presentation/components/ui/card.tsx"],
+      "requires": ["cn"]
+    },
+    "tabs": {
+      "description": "Tabs, from shadcn/ui.",
+      "files": ["src/presentation/components/ui/tabs.tsx"],
+      "requires": ["cn"]
+    },
+    "tooltip": {
+      "description": "Tooltip, from shadcn/ui.",
+      "files": ["src/presentation/components/ui/tooltip.tsx"],
+      "requires": ["cn"]
+    },
+    "separator": {
+      "description": "Separator, from shadcn/ui.",
+      "files": ["src/presentation/components/ui/separator.tsx"],
+      "requires": ["cn"]
+    },
+    "breadcrumb": {
+      "description": "Breadcrumb, from shadcn/ui.",
+      "files": ["src/presentation/components/ui/breadcrumb.tsx"],
+      "requires": ["cn"]
+    },
+    "sheet": {
+      "description": "Sheet, from shadcn/ui.",
+      "files": ["src/presentation/components/ui/sheet.tsx"],
+      "requires": ["cn"]
+    },
+    "cn": {
+      "description": "Class name helper used by every component.",
+      "files": ["src/infrastructure/cn.ts"],
+      "requires": []
+    },
+    "tone-badge": {
+      "description": "The only way to show a status color.",
+      "files": ["src/presentation/components/site/ToneBadge.tsx"],
+      "requires": ["cn"]
+    },
+    "icon": {
+      "description": "A lucide icon by its kebab-case name.",
+      "files": ["src/presentation/components/site/Icon.tsx"],
+      "requires": []
+    },
+    "section-header": {
+      "description": "Mono eyebrow, heading and lede.",
+      "files": ["src/presentation/components/site/SectionHeader.tsx"],
+      "requires": ["cn"]
+    },
+    "command-box": {
+      "description": "A copyable shell command.",
+      "files": ["src/presentation/components/site/CommandBox.tsx"],
+      "requires": ["cn"]
+    },
+    "item-card": {
+      "description": "ItemCard and CardGrid for catalogs.",
+      "files": ["src/presentation/components/site/ItemCard.tsx"],
+      "requires": ["cn", "tone-badge"]
+    },
+    "feature-grid": {
+      "description": "Icon, eyebrow, title and text.",
+      "files": ["src/presentation/components/site/FeatureGrid.tsx"],
+      "requires": ["icon"]
+    },
+    "flow-diagram": {
+      "description": "Steps in a row that stack on small screens.",
+      "files": ["src/presentation/components/site/FlowDiagram.tsx"],
+      "requires": []
+    },
+    "command-table": {
+      "description": "A command and what it does.",
+      "files": ["src/presentation/components/site/CommandTable.tsx"],
+      "requires": []
+    },
+    "callout": {
+      "description": "A note, a tip or a warning.",
+      "files": ["src/presentation/components/site/Callout.tsx"],
+      "requires": ["cn"]
+    },
+    "breadcrumbs": {
+      "description": "Breadcrumb trail for a page.",
+      "files": ["src/presentation/components/site/Breadcrumbs.tsx"],
+      "requires": ["breadcrumb"]
+    },
+    "mobile-menu": {
+      "description": "Navigation sheet for small screens.",
+      "files": ["src/presentation/components/site/MobileMenu.tsx"],
+      "requires": ["sheet"]
+    },
+    "site-header": {
+      "description": "Sticky translucent header.",
+      "files": ["src/presentation/components/site/SiteHeader.astro"],
+      "requires": ["button", "mobile-menu"]
+    },
+    "hero": {
+      "description": "Badge, headline, lede, command and actions.",
+      "files": ["src/presentation/components/site/Hero.astro"],
+      "requires": ["button", "command-box", "tone-badge"]
+    },
+    "cta-band": {
+      "description": "Closing headline with a command and actions.",
+      "files": ["src/presentation/components/site/CtaBand.astro"],
+      "requires": ["button", "command-box"]
+    },
+    "site-footer": {
+      "description": "Brand, link columns and a legal bar.",
+      "files": ["src/presentation/components/site/SiteFooter.tsx"],
+      "requires": []
+    }
+  }
+}

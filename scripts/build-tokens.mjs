@@ -9,9 +9,13 @@ const SOURCE = join(ROOT, "template", "design", "tokens.json");
 const TARGET = join(ROOT, "template", "src", "styles", "tokens.css");
 
 export function renderTokens(tokens) {
-  const lines = ["/* Generated from design/tokens.json by scripts/build-tokens.mjs. Do not edit. */", ":root {"];
+  const lines = [
+    "/* Generated from design/tokens.json by scripts/build-tokens.mjs. Do not edit. */",
+    ":root {",
+  ];
   for (const [group, values] of Object.entries(tokens)) {
-    for (const [name, value] of Object.entries(values)) lines.push(`  --sk-${group === "color" ? "" : `${group}-`}${name}: ${value};`);
+    for (const [name, value] of Object.entries(values))
+      lines.push(`  --sk-${group === "color" ? "" : `${group}-`}${name}: ${value};`);
   }
   lines.push("}", "");
   return lines.join("\n");
@@ -26,7 +30,9 @@ if (process.argv.includes("--check")) {
     // a missing file counts as out of date
   }
   if (current !== css) {
-    console.error("template/src/styles/tokens.css is out of date. Run `node scripts/build-tokens.mjs`.");
+    console.error(
+      "template/src/styles/tokens.css is out of date. Run `node scripts/build-tokens.mjs`.",
+    );
     process.exit(1);
   }
 } else {

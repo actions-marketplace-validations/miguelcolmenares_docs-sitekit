@@ -3,7 +3,18 @@ import tseslint from "typescript-eslint";
 import reactHooks from "eslint-plugin-react-hooks";
 
 export default tseslint.config(
-  { ignores: ["dist", "coverage", "test-results", "e2e/.build", "template", "node_modules"] },
+  {
+    ignores: [
+      "dist",
+      "coverage",
+      "test-results",
+      "e2e/.build",
+      "template/node_modules",
+      "template/dist",
+      "template/.astro",
+      "node_modules",
+    ],
+  },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
@@ -22,6 +33,7 @@ export default tseslint.config(
         console: "readonly",
         module: "writable",
         require: "readonly",
+        URL: "readonly",
       },
     },
   },

@@ -13,6 +13,17 @@ updates:
       # break `npm ci` for everyone, so wait until the linter supports it.
       - dependency-name: typescript
         update-types: ["version-update:semver-major"]
+  # The template ships its own lockfile, so a generated site starts from a tested set of versions.
+  - package-ecosystem: npm
+    directory: /template
+    schedule:
+      interval: weekly
+    groups:
+      template:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:

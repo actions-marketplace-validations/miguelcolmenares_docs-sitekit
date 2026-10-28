@@ -24,6 +24,7 @@ const dot: Record<NonNullable<VariantProps<typeof tone>["tone"]>, string> = {
   warn: "bg-warn",
 };
 
+/** The four tones a badge can have. */
 export type Tone = NonNullable<VariantProps<typeof tone>["tone"]>;
 
 /** The only way to show a tone. Components never pick status colors on their own. */

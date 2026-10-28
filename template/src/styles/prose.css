@@ -77,6 +77,8 @@
 }
 .prose-site pre {
   position: relative;
+  /* The copy button sits in this top band, so it never covers the first line of code. */
+  padding-top: 2.6rem !important;
   overflow-x: auto;
   background: var(--sk-surface) !important;
   border: 1px solid var(--sk-border);
@@ -86,6 +88,7 @@
   line-height: 1.65;
 }
 .prose-site pre code {
+  font-size: 1em;
   background: none;
   border: 0;
   padding: 0;
@@ -128,17 +131,31 @@
 }
 .prose-site .copy-code {
   position: absolute;
-  top: 0.55rem;
-  right: 0.55rem;
+  top: 0.4rem;
+  right: 0.5rem;
+  min-width: 2.75rem;
+  min-height: 2rem;
   border: 1px solid var(--sk-border-strong);
   background: var(--sk-surface-2);
   color: var(--sk-fg-muted);
   border-radius: 6px;
-  padding: 0.15rem 0.5rem;
-  font: 500 11px var(--sk-font-mono);
+  padding: 0.25rem 0.7rem;
+  font: 500 12px var(--sk-font-mono);
   cursor: pointer;
 }
 .prose-site .copy-code:hover {
   color: var(--sk-fg-bright);
   border-color: var(--sk-border-hover);
+}
+
+.prose-site pre:focus-visible,
+.prose-site table:focus-visible {
+  outline: 2px solid var(--sk-accent);
+  outline-offset: 2px;
+}
+/* Long unbroken words and inline code wrap instead of pushing the page sideways. */
+.prose-site :not(pre) > code,
+.prose-site p,
+.prose-site li {
+  overflow-wrap: anywhere;
 }

@@ -1,12 +1,17 @@
 import { remarkRewriteLinks } from "./remarkRewriteLinks";
 import type { LinkContext } from "../domain";
 
+/** A page body as HTML, with its headings for the table of contents. */
 export interface RenderedMarkdown {
   html: string;
   headings: { depth: number; slug: string; text: string }[];
 }
 
-/** Walk a hast tree and open web links in a new tab, safely. */
+/**
+ * Walk a hast tree to make rendered markdown safe and usable:
+ * web links open in a new tab, and blocks that can scroll sideways (code, tables) can be
+ * focused, so a keyboard user can scroll them. Done in the HTML, so it needs no JavaScript.
+ */
 function rehypeExternalLinks() {
   type Node = {
     type: string;
@@ -15,6 +20,9 @@ function rehypeExternalLinks() {
     children?: Node[];
   };
   const visit = (node: Node) => {
+    if (node.type === "element" && (node.tagName === "pre" || node.tagName === "table")) {
+      node.properties = { ...node.properties, tabIndex: 0 };
+    }
     if (node.type === "element" && node.tagName === "a") {
       const href = String(node.properties?.href ?? "");
       if (/^https?:\/\//i.test(href))

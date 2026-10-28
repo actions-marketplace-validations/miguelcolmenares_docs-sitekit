@@ -1,3 +1,4 @@
+/** A group of pages: the docs, the examples, or the single changelog. */
 export type Collection = "docs" | "examples" | "changelog";
 
 /** A markdown file read from the repository, before it becomes a page. */

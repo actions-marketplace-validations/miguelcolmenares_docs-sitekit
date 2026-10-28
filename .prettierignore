@@ -6,3 +6,4 @@ template/package-lock.json
 template/.astro
 template/dist
 e2e/.build
+template/src/styles/tokens.css

@@ -7,6 +7,7 @@ const kinds = {
   warning: { icon: TriangleAlert, label: "Warning", tone: "text-warn" },
 } as const;
 
+/** A highlighted note, tip or warning inside a page. */
 export function Callout({
   kind = "note",
   title,

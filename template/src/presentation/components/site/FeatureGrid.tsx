@@ -1,5 +1,6 @@
 import { Icon } from "./Icon";
 
+/** One feature: a lucide icon name, an eyebrow, a title and a sentence. */
 export interface FeatureItem {
   icon: string;
   eyebrow: string;
@@ -7,6 +8,7 @@ export interface FeatureItem {
   text: string;
 }
 
+/** Features as cards, two columns from the `md` breakpoint. */
 export function FeatureGrid({ features }: { features: readonly FeatureItem[] }) {
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

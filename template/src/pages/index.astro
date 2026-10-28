@@ -38,7 +38,7 @@ const resolve = (link: { label: string; href: string }) => ({ ...link, href: lin
     docs.length > 0 && (
       <section class="mx-auto max-w-site border-t border-border px-5 py-20">
         <SectionHeader eyebrow={`${config.features.length > 0 ? "02" : "01"} · Documentation`} title="Start here" lede="Everything you need, in reading order.">
-          <a href={href("docs/")} class="text-sm text-fg-muted hover:text-fg-bright">All docs →</a>
+          <a href={href("docs/")} class="inline-flex min-h-11 items-center text-sm text-fg-muted hover:text-fg-bright">All docs →</a>
         </SectionHeader>
         <CardGrid>
           {docs.map((document) => <ItemCard href={document.route} title={document.title} description={document.description} hint="Read" />)}
@@ -51,7 +51,7 @@ const resolve = (link: { label: string; href: string }) => ({ ...link, href: lin
     examples.length > 0 && (
       <section class="mx-auto max-w-site border-t border-border px-5 py-20">
         <SectionHeader eyebrow="Examples" title="See it in use">
-          <a href={href("examples/")} class="text-sm text-fg-muted hover:text-fg-bright">All examples →</a>
+          <a href={href("examples/")} class="inline-flex min-h-11 items-center text-sm text-fg-muted hover:text-fg-bright">All examples →</a>
         </SectionHeader>
         <CardGrid>
           {examples.map((document) => <ItemCard href={document.route} title={document.title} description={document.description} hint="Open" />)}

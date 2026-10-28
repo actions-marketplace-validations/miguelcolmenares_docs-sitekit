@@ -11,8 +11,8 @@
   --sk-fg: #ededf0;
   --sk-fg-bright: #ffffff;
   --sk-fg-muted: #a1a1aa;
-  --sk-fg-dim: #7c7c86;
-  --sk-fg-faint: #5a5a64;
+  --sk-fg-dim: #87878d;
+  --sk-fg-faint: #6b6b71;
   --sk-accent: #a89bff;
   --sk-accent-strong: #7c6af0;
   --sk-accent-contrast: #ffffff;
@@ -23,11 +23,10 @@
   --sk-radius-md: 10px;
   --sk-radius-lg: 14px;
   --sk-radius-xl: 20px;
-  --sk-font-sans:
-    "Geist Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --sk-font-sans: "Geist Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --sk-font-mono: "Geist Mono Variable", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --sk-layout-maxw: 1120px;
   --sk-layout-maxw-prose: 760px;
   --sk-layout-nav-h: 60px;
-  --sk-motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --sk-motion-ease: cubic-bezier(.22, 1, .36, 1);
 }

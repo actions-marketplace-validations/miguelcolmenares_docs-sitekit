@@ -16,7 +16,7 @@ export function loadSiteConfig(siteDir: string): SiteConfig {
     return parseSiteConfig(JSON.parse(raw));
   } catch (error) {
     if (error instanceof SyntaxError)
-      throw new Error(`${file} is not valid JSON: ${error.message}`);
+      throw new Error(`${file} is not valid JSON: ${error.message}`, { cause: error });
     throw error;
   }
 }

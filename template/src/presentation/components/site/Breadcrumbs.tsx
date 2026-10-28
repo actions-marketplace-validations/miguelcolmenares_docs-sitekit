@@ -8,6 +8,7 @@ import {
   BreadcrumbSeparator,
 } from "../ui/breadcrumb";
 
+/** The trail from the home page to the current page. The last item is the page itself and has no link. */
 export function Breadcrumbs({ items }: { items: readonly { label: string; href?: string }[] }) {
   return (
     <Breadcrumb>
@@ -16,7 +17,12 @@ export function Breadcrumbs({ items }: { items: readonly { label: string; href?:
           <Fragment key={`${item.href ?? "current"}-${item.label}`}>
             <BreadcrumbItem>
               {item.href ? (
-                <BreadcrumbLink href={item.href}>{item.label}</BreadcrumbLink>
+                <BreadcrumbLink
+                  href={item.href}
+                  className="inline-flex min-h-11 items-center md:min-h-6"
+                >
+                  {item.label}
+                </BreadcrumbLink>
               ) : (
                 <BreadcrumbPage>{item.label}</BreadcrumbPage>
               )}

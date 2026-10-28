@@ -47,7 +47,7 @@ export function CommandBox({
         className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-surface-3 hover:text-fg-bright"
       >
         {copied ? (
-          <Check className="size-4 text-success" aria-hidden="true" />
+          <Check className="size-4 text-brand" aria-hidden="true" />
         ) : (
           <Copy className="size-4" aria-hidden="true" />
         )}

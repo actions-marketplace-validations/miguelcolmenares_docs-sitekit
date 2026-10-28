@@ -14,7 +14,7 @@ const { title, lede, documents } = Astro.props;
 
 <BaseLayout title={title} description={lede}>
   <div class="mx-auto max-w-site px-5 py-14">
-    <SectionHeader title={title} lede={lede} />
+    <SectionHeader as="h1" title={title} lede={lede} />
     <CardGrid>
       {documents.map((document) => <ItemCard href={document.route} title={document.title} description={document.description} hint="Read more" />)}
     </CardGrid>

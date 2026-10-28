@@ -1,12 +1,16 @@
 import { cn } from "@/infrastructure/cn";
 
+/** A mono eyebrow, a heading and a lede, with room for an action on the right. */
 export function SectionHeader({
   eyebrow,
   title,
   lede,
   className,
   children,
+  as: Heading = "h2",
 }: {
+  /** Use "h1" for the heading that names the page. */
+  as?: "h1" | "h2";
   eyebrow?: string;
   title: string;
   lede?: React.ReactNode;
@@ -21,9 +25,9 @@ export function SectionHeader({
             {eyebrow}
           </p>
         )}
-        <h2 className="text-balance text-[clamp(1.75rem,4vw,2.6rem)] leading-[1.1] font-semibold tracking-[-0.03em] text-fg-bright">
+        <Heading className="text-balance text-[clamp(1.75rem,4vw,2.6rem)] leading-[1.1] font-semibold tracking-[-0.03em] text-fg-bright">
           {title}
-        </h2>
+        </Heading>
         {lede && <p className="mt-4 text-pretty text-lg leading-relaxed text-fg-muted">{lede}</p>}
       </div>
       {children}

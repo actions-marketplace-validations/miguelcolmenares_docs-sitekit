@@ -19,6 +19,7 @@ function walk(directory: string): string[] {
   });
 }
 
+/** The markdown read from a repository, and the paths of every file in it. */
 export interface RepositorySources {
   /** Absolute path of the repository root. */
   root: string;

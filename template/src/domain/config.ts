@@ -59,8 +59,14 @@ export const siteConfigSchema = z.strictObject({
       changelog: "../CHANGELOG.md",
     }),
   deploy: z
-    .strictObject({ target: z.enum(["github-pages", "none"]).default("github-pages") })
-    .default({ target: "github-pages" }),
+    .strictObject({
+      target: z.enum(["github-pages", "none"]).default("github-pages"),
+      /** Say that a private repository's Pages site is meant to be public. */
+      acknowledgePublicPages: z.boolean().default(false),
+      /** For runners where `gh` cannot tell. Otherwise the check asks GitHub. */
+      repositoryVisibility: z.enum(["public", "private", "internal"]).optional(),
+    })
+    .default({ target: "github-pages", acknowledgePublicPages: false }),
   anonymize: z
     .strictObject({
       excludePaths: z.array(z.string()).default([]),
@@ -71,8 +77,11 @@ export const siteConfigSchema = z.strictObject({
     .default({ excludePaths: [], replace: {}, denyPatterns: [], allow: [] }),
 });
 
+/** A validated `sitekit.config.json`. */
 export type SiteConfig = z.infer<typeof siteConfigSchema>;
+/** A labelled link, used in the navigation and the footer. */
 export type NavLink = z.infer<typeof link>;
+/** One card of the home page features section. */
 export type Feature = z.infer<typeof feature>;
 
 /** Validate a parsed `sitekit.config.json`. Throws a readable error listing every problem. */

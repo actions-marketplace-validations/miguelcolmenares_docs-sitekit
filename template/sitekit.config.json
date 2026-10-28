@@ -41,5 +41,10 @@
       "text": "Every route is a real HTML file with its own title. Only the copy buttons and the mobile menu ship JavaScript."
     }
   ],
-  "sources": { "root": "..", "docs": "../docs", "examples": "../examples", "changelog": "../CHANGELOG.md" }
+  "sources": {
+    "root": "..",
+    "docs": "../docs",
+    "examples": "../examples",
+    "changelog": "../CHANGELOG.md"
+  }
 }

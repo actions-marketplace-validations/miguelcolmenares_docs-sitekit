@@ -1,3 +1,4 @@
+/** Where a link should point once its file is published, or why it cannot. */
 export type LinkResolution =
   | { kind: "unchanged"; href: string }
   | { kind: "route"; href: string }
@@ -5,6 +6,7 @@ export type LinkResolution =
   | { kind: "text-only"; warning: string }
   | { kind: "missing"; href: string; warning: string };
 
+/** What link resolution needs to know about the repository and the page that holds the link. */
 export interface LinkContext {
   /** Repository-relative path of the file that holds the link, with forward slashes. */
   file: string;

@@ -1,0 +1,50 @@
+/** Everything the use cases need from the outside world. Adapters live in infrastructure. */
+export interface FileSystem {
+  exists(path: string): boolean;
+  isDirectory(path: string): boolean;
+  readText(path: string): string;
+  writeText(path: string, content: string): void;
+  /** Every file under a directory, as paths relative to it, with forward slashes. */
+  listFiles(directory: string): string[];
+}
+
+/** Whether a repository is public, private, internal, or could not be determined. */
+export type RepositoryVisibility = "public" | "private" | "internal" | "unknown";
+
+/** What the use cases ask of the machine they run on: the git remote and the repository visibility. */
+export interface Environment {
+  /** `git remote get-url origin`, or undefined. */
+  remoteUrl(directory: string): string | undefined;
+  /** Ask the host whether a repository is private. */
+  repositoryVisibility(repositoryUrl: string): RepositoryVisibility;
+}
+
+/** One file of the template, with its path inside the template and its text. */
+export interface TemplateFile {
+  /** Path inside the template, with forward slashes. */
+  path: string;
+  content: string;
+}
+
+/** The files the package ships for a new site. */
+export interface TemplateSource {
+  files(): TemplateFile[];
+  /** The deploy workflow, with the version placeholder still in it. */
+  workflow(): string;
+  /** The component registry. */
+  registry(): ComponentRegistry;
+  /** Version of this package, pinned in the generated workflow. */
+  version(): string;
+}
+
+/** A registry entry: what the component is, the files it owns and the components it needs. */
+export interface ComponentEntry {
+  description: string;
+  files: string[];
+  requires: string[];
+}
+
+/** Every component the template offers, by name. */
+export interface ComponentRegistry {
+  components: Record<string, ComponentEntry>;
+}

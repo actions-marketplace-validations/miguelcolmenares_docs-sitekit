@@ -1,3 +1,4 @@
+/** One step of a flow: a phase label, a title, an optional detail and an optional command. */
 export interface FlowStep {
   label: string;
   title: string;

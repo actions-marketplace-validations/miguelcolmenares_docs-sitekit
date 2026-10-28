@@ -6,6 +6,7 @@ import type { RenderedMarkdown } from "./renderMarkdown";
 import { readSources } from "./readSources";
 import { loadSiteConfig } from "./siteConfig";
 
+/** A loaded site: its config, its pages, a renderer, and the problems found on the way. */
 export interface Site {
   config: SiteConfig;
   documents: Document[];
