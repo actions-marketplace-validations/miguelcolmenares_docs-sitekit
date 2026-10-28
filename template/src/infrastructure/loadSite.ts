@@ -24,7 +24,10 @@ export function loadSite(siteDir: string = process.cwd()): Site {
   if (cached) return cached;
   const config = loadSiteConfig(siteDir);
   const sources = readSources(siteDir, config);
-  const documents = buildDocuments(sources.files, { base: config.site.base });
+  const documents = buildDocuments(sources.files, {
+    base: config.site.base,
+    collections: config.collections,
+  });
   const published = publishedRoutes(documents);
   const warnings: string[] = [];
 
