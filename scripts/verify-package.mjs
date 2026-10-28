@@ -91,6 +91,7 @@ check("tarball has the CLI, the template, the registry and the workflow", () => 
     "template/src/domain/config.ts",
     "template/src/presentation/components/site/Hero.astro",
     "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
   ]) {
     assert(packedPaths.includes(required), `missing ${required}`);
   }

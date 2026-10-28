@@ -26,7 +26,8 @@
     "!template/.astro",
     "!template/sitekit.config.json",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md"
   ],
   "engines": {
     "node": ">=22.0.0"

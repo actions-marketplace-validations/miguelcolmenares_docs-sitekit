@@ -81,5 +81,10 @@
       "dir": "../examples",
       "lede": "Working examples you can copy and adapt."
     }
-  ]
+  ],
+  "deploy": {
+    "target": "github-pages",
+    "acknowledgePublicPages": false,
+    "repositoryVisibility": "public"
+  }
 }
