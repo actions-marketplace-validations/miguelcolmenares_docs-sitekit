@@ -253,15 +253,27 @@ check("init found docs, tutorials (inside docs/) and examples, each as its own c
     `got ${JSON.stringify(collections)}`,
   );
 });
-check("the workflow pins the version of the CLI that wrote it", () => {
-  const { version } = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
-  assert(
-    readFileSync(join(REPO, ".github", "workflows", "docs.yml"), "utf8").includes(
-      `@miguelcolmenares/sitekit@${version} check`,
-    ),
-    "version is not pinned",
-  );
-});
+check(
+  "the generated workflow calls the sitekit action at the version that wrote it, and rebuilds on a release",
+  () => {
+    const { version } = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
+    const workflow = readFileSync(join(REPO, ".github", "workflows", "docs.yml"), "utf8");
+    assert(
+      workflow.includes(`miguelcolmenares/sitekit@v${version}`),
+      "the action is not pinned to this version",
+    );
+    assert(
+      new RegExp(`version: ${version.replaceAll(".", "\\.")}`).test(workflow),
+      "the CLI version is not pinned",
+    );
+    assert(
+      /release:\s*\n\s*types: \[published\]/.test(workflow),
+      "a release does not trigger a rebuild",
+    );
+    assert(!workflow.includes("__SITEKIT_VERSION__"), "the version placeholder was left in");
+    assert(!workflow.includes("configure-pages"), "it uses configure-pages");
+  },
+);
 check("the generated site depends on no sitekit package and on no private registry", () => {
   const manifest =
     readFileSync(join(SITE, "package.json"), "utf8") +
@@ -423,6 +435,32 @@ check("fonts are served from the site, with no request to a font host", () => {
     "a font host is referenced",
   );
 });
+check(
+  "the footer shows the version from package.json, and a rebuild after a release shows the new one",
+  () => {
+    assert(/>v1\.2\.3</.test(read("index.html")), "the footer does not show v1.2.3");
+    const manifest = join(REPO, "package.json");
+    const original = readFileSync(manifest, "utf8");
+    writeFileSync(manifest, original.replace('"version": "1.2.3"', '"version": "1.3.0"'));
+    try {
+      run("npm", ["run", "build"], {
+        cwd: SITE,
+        env: { ...process.env, ASTRO_TELEMETRY_DISABLED: "1" },
+      });
+    } finally {
+      // The config never held the version, so only the repository's package.json changed.
+      assert(
+        !/"version"/.test(readFileSync(join(SITE, "sitekit.config.json"), "utf8")),
+        "the config holds a version",
+      );
+    }
+    assert(/>v1\.3\.0</.test(read("index.html")), "the rebuilt footer does not show v1.3.0");
+    assert(
+      /href="\/widget\/changelog\/"[^>]*>v1\.3\.0</.test(read("docs/guide/index.html")),
+      "the version does not link to the changelog",
+    );
+  },
+);
 check("the built site has no credentials and passes check --dist", () => {
   assert(/Safe to publish/.test(sitekit(["check", "--dist", "site/dist"])), "check --dist failed");
 });

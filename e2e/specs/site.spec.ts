@@ -148,6 +148,16 @@ test.describe("collections and groups", () => {
   });
 });
 
+test.describe("version", () => {
+  test("the footer shows the version of the repository and links to the changelog", async ({
+    page,
+  }) => {
+    await page.goto(BASE);
+    const link = page.locator("footer").getByRole("link", { name: "v1.3.0" });
+    await expect(link).toHaveAttribute("href", `${BASE}changelog/`);
+  });
+});
+
 test.describe("keyboard and navigation", () => {
   test("the first Tab stop is the skip link, and it jumps to the content", async ({ page }) => {
     await page.goto(BASE);

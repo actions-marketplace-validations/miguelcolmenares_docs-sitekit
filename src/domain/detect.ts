@@ -65,7 +65,6 @@ export function deriveConfig(facts: RepositoryFacts): SiteConfig {
       base: github && !userSite ? `/${github.name}/` : "/",
       ...(github ? { repository: github.url } : {}),
       ...(pkg.license ? { license: pkg.license } : {}),
-      ...(pkg.version ? { version: pkg.version } : {}),
       ...(installable ? { installCommand: `npm install ${pkg.name}` } : {}),
     },
     hero: {

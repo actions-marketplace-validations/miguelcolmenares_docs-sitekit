@@ -48,9 +48,10 @@ describe("deriveConfig", () => {
       base: "/widget/",
       repository: "https://github.com/Me/widget",
       license: "MIT",
-      version: "1.2.3",
       installCommand: "npm install @me/widget",
     });
+    // Not copied into the config: the site reads it from package.json at build time, so a release rebuild shows the release.
+    expect(config.site.version).toBeUndefined();
     expect(config.hero.primary).toEqual({ label: "Get started", href: "/docs/" });
     expect(config.hero.secondary?.href).toBe("https://github.com/Me/widget");
   });
