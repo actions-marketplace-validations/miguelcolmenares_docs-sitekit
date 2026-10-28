@@ -1,0 +1,8 @@
+dist
+coverage
+CHANGELOG.md
+package-lock.json
+template/package-lock.json
+template/.astro
+template/dist
+e2e/.build

@@ -1,0 +1,45 @@
+{
+  "site": {
+    "name": "sitekit",
+    "description": "Design system and scaffold for documentation microsites on GitHub Pages.",
+    "url": "https://miguelcolmenares.github.io",
+    "base": "/sitekit/",
+    "repository": "https://github.com/miguelcolmenares/sitekit",
+    "license": "MIT",
+    "installCommand": "npx @miguelcolmenares/sitekit init"
+  },
+  "hero": {
+    "badge": "Astro · Tailwind · shadcn/ui · lucide",
+    "title": "Documentation sites that look like a product.",
+    "lede": "A dark design system, a content pipeline that reads your repository, and a scaffold that publishes to GitHub Pages. MIT licensed.",
+    "primary": { "label": "Get started", "href": "/docs/getting-started/" },
+    "secondary": { "label": "Browse the components", "href": "/docs/components/" }
+  },
+  "features": [
+    {
+      "icon": "layers",
+      "eyebrow": "Design system",
+      "title": "Tokens and components you own",
+      "text": "Components are copied into your site, shadcn style. Edit them freely. One tokens file drives every color, radius and font."
+    },
+    {
+      "icon": "file-text",
+      "eyebrow": "Your repository is the source",
+      "title": "Docs from the files you already have",
+      "text": "Markdown in docs, examples and the changelog becomes pages. Relative links keep working on GitHub and on the site."
+    },
+    {
+      "icon": "shield-check",
+      "eyebrow": "Safe to publish",
+      "title": "A closed contract and a publish check",
+      "text": "Unknown config keys fail the build. A scan looks for credentials and internal hosts before anything is deployed."
+    },
+    {
+      "icon": "zap",
+      "eyebrow": "Fast by default",
+      "title": "Static HTML, almost no JavaScript",
+      "text": "Every route is a real HTML file with its own title. Only the copy buttons and the mobile menu ship JavaScript."
+    }
+  ],
+  "sources": { "root": "..", "docs": "../docs", "examples": "../examples", "changelog": "../CHANGELOG.md" }
+}

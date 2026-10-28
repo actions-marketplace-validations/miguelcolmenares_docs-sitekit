@@ -1,0 +1,91 @@
+{
+  "name": "@miguelcolmenares/sitekit",
+  "version": "0.1.0",
+  "description": "Design system and scaffold for documentation microsites on GitHub Pages: Astro, Tailwind, shadcn/ui and lucide-react.",
+  "author": "Miguel Colmenares <me@miguelcolmenares.com>",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "bin": {
+    "sitekit": "./dist/cli.js"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "template",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "jest",
+    "test:unit": "jest --selectProjects unit",
+    "test:integration": "jest --selectProjects integration",
+    "test:e2e": "node scripts/verify-package.mjs && playwright test -c e2e/playwright.config.ts",
+    "verify:package": "node scripts/verify-package.mjs",
+    "prepare": "husky"
+  },
+  "keywords": [
+    "documentation",
+    "docs",
+    "github-pages",
+    "astro",
+    "tailwind",
+    "shadcn",
+    "design-system",
+    "scaffold"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/miguelcolmenares/sitekit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/miguelcolmenares/sitekit/issues"
+  },
+  "homepage": "https://github.com/miguelcolmenares/sitekit#readme",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.64.1",
+    "@swc/core": "^1.16.20",
+    "@swc/jest": "^0.2.39",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^22.20.5",
+    "eslint": "^10.13.0",
+    "husky": "^9.1.7",
+    "jest": "^30.5.2",
+    "prettier": "^3.9.10",
+    "tsdown": "^0.23.3",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.1"
+  },
+  "dependencies": {
+    "gray-matter": "^4.0.3",
+    "zod": "^4.6.7"
+  }
+}

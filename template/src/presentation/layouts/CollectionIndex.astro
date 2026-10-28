@@ -1,0 +1,22 @@
+---
+import type { Document } from "../../domain";
+import { CardGrid, ItemCard } from "../components/site/ItemCard";
+import { SectionHeader } from "../components/site/SectionHeader";
+import BaseLayout from "./BaseLayout.astro";
+
+interface Props {
+  title: string;
+  lede: string;
+  documents: Document[];
+}
+const { title, lede, documents } = Astro.props;
+---
+
+<BaseLayout title={title} description={lede}>
+  <div class="mx-auto max-w-site px-5 py-14">
+    <SectionHeader title={title} lede={lede} />
+    <CardGrid>
+      {documents.map((document) => <ItemCard href={document.route} title={document.title} description={document.description} hint="Read more" />)}
+    </CardGrid>
+  </div>
+</BaseLayout>
