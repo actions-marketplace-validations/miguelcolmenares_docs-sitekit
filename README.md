@@ -54,7 +54,7 @@ The documentation site is built with this kit. Read it under `docs/`: getting st
 ## Development
 
 ```bash
-npm ci
+npm run bootstrap      # installs the CLI and the template
 npm test               # unit and integration
 npm run test:e2e       # packs the package, generates a site, builds it, and drives it in a browser
 npm run build:tokens   # regenerate the CSS from template/design/tokens.json
