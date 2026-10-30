@@ -91,7 +91,12 @@ export function runCli(argv: string[], io: CliIo): number {
                 base: config.site.base,
                 collections: config.collections,
               });
-              return { config, files, routes: documents.map((document) => document.route) };
+              return {
+                config,
+                files,
+                documents,
+                routes: documents.map((document) => document.route),
+              };
             },
           },
           { root, siteDir, dist: values.dist ? resolve(io.cwd, values.dist) : undefined },

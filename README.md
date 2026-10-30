@@ -129,6 +129,10 @@ A source that does not exist makes no page and no menu entry. The title is the f
 else the file name. The description is the frontmatter `description`, else the first paragraph of prose (badges, tables, quotes,
 HTML and code are skipped). `order: 1` in the frontmatter moves a page up.
 
+With the `llms` key in `sitekit.config.json`, the site also writes an `llms.txt` map of its pages and a Markdown copy of each
+one, for assistants and developer tools. It is a community proposal, not a search feature: Google Search does not use it.
+See [docs/llms.md](docs/llms.md).
+
 ## Theme
 
 The site is dark by default. A header switch lets the visitor pick the light theme, and the choice is remembered in the browser. Set `theme.default` in `sitekit.config.json` to `light`, or to `system` to follow the operating system, to change the first view. A site generated before this option was added keeps its own tokens file and has no light set, so it stays dark until it adds one (see `design/tokens.json` in the site).

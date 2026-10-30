@@ -1,5 +1,6 @@
 ---
 import "../../styles/global.css";
+import { llmsUrl, markdownUrl } from "../../domain";
 import { loadSite } from "../../infrastructure";
 import { SiteFooter } from "../components/site/SiteFooter";
 import SiteHeader from "../components/site/SiteHeader.astro";
@@ -13,6 +14,11 @@ interface Props {
 
 const site = loadSite();
 const { config, href } = site;
+// Only a site that has llms.txt points at it. A missing key means no file and no link.
+const describedBy = config.llms.enabled ? llmsUrl(config.site.url, config.site.base) : undefined;
+// A page that has a Markdown copy points at it, so a tool that reads the HTML finds the text version.
+const copy = config.llms.enabled && config.llms.markdownPages ? site.documents.find((document) => document.route === Astro.url.pathname) : undefined;
+const alternate = copy ? markdownUrl(config.site.url, copy.route) : undefined;
 const { title, description = config.site.description } = Astro.props;
 const pageTitle = title ? `${title} · ${config.site.name}` : `${config.site.name}: ${config.site.description}`;
 const canonical = new URL(Astro.url.pathname, config.site.url).toString();
@@ -63,6 +69,8 @@ const columns = [
     <meta name="twitter:card" content="summary" />
     <link rel="icon" href={href("favicon.svg")} type="image/svg+xml" />
     <link rel="sitemap" href={href("sitemap-index.xml")} />
+    {describedBy && <link rel="describedby" href={describedBy} />}
+    {alternate && <link rel="alternate" type="text/markdown" href={alternate} />}
     <!-- Runs before the first paint: picks the theme from the saved choice, the default, or the OS (for system). -->
     <script is:inline define:vars={{ defaultTheme: themeDefault, colors: themeColors }}>
       (function () {

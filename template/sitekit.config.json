@@ -71,7 +71,7 @@
         {
           "name": "Content",
           "tone": "success",
-          "items": ["content", "deploying", "search"]
+          "items": ["content", "deploying", "search", "llms"]
         }
       ]
     },
@@ -89,5 +89,10 @@
     "target": "github-pages",
     "acknowledgePublicPages": false,
     "repositoryVisibility": "public"
+  },
+  "llms": {
+    "enabled": true,
+    "optional": ["examples"],
+    "markdownPages": true
   }
 }
