@@ -1,6 +1,7 @@
 /**
  * The kinds of problem `check` finds in the markdown, and the key each one has under `check` in
- * `sitekit.config.json`. A new kind is added here, in `DEFAULT_SEVERITY` and in the documentation.
+ * `sitekit.config.json`. A new kind is added here, in `DEFAULT_SEVERITY` and in `FINDING_DESCRIPTIONS`, which
+ * the configuration reference is generated from.
  */
 export const FINDING_KINDS = [
   "links",
@@ -13,6 +14,7 @@ export const FINDING_KINDS = [
   "callouts",
   "variables",
   "snippets",
+  "card",
 ] as const;
 
 /** One of the kinds of problem found in the content. */
@@ -24,7 +26,10 @@ export type Severity = "error" | "warning";
 /** The value of a `check.<kind>` key: a severity, or `off` to stop looking for that kind. */
 export type SeverityLevel = Severity | "off";
 
-/** What each kind is until the config says otherwise. A missing image breaks a page, the rest only misleads. */
+/**
+ * What each kind is until the config says otherwise. A missing image breaks a page, a card the frontmatter got
+ * wrong shows less than the author wrote, and the rest only misleads.
+ */
 export const DEFAULT_SEVERITY: Readonly<Record<FindingKind, Severity>> = {
   links: "warning",
   excludedLinks: "warning",
@@ -36,6 +41,24 @@ export const DEFAULT_SEVERITY: Readonly<Record<FindingKind, Severity>> = {
   callouts: "warning",
   variables: "warning",
   snippets: "error",
+  card: "error",
+};
+
+/** What each kind looks for, in a sentence. It is the description of the `check.<kind>` key in the configuration reference. */
+export const FINDING_DESCRIPTIONS: Readonly<Record<FindingKind, string>> = {
+  links: "A relative link to a file that does not exist, or that leaves the repository.",
+  excludedLinks: "A link to a file you excluded, so only its text is kept.",
+  anchors: "A link to a heading that does not exist in the target page, or in the same page.",
+  images: "A relative image path that does not exist.",
+  frontmatter:
+    "A frontmatter key the kit does not read, such as `titel`, with the key it looks like.",
+  order: "An `order` in the frontmatter that is not a number.",
+  duplicateHeadings: "A second heading in a page that makes the same anchor as an earlier one.",
+  callouts:
+    "A callout marker that is not one of the five, such as `[!NOTES]`, so the quote stays plain.",
+  variables: "A `{{ name }}` that is not declared under `vars`, so it stays as written.",
+  snippets: "An include of a snippet that does not exist, or an include inside a snippet.",
+  card: "A side card the frontmatter got wrong: an unknown key under `meta`, a missing text, or a link with an unsafe scheme.",
 };
 
 /** A problem in a markdown file, with where it is and how serious it is. */
