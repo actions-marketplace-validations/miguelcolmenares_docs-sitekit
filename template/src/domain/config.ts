@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { iconProblem } from "./brands";
+import { FINDING_KINDS, isFindingKind } from "./findings";
+import { EDIT_HOSTS } from "./editLink";
 
 const link = z.strictObject({
   label: z.string().min(1),
@@ -131,6 +133,34 @@ export const siteConfigSchema = z
         allow: z.array(z.string()).default([]),
       })
       .default({ excludePaths: [], replace: {}, denyPatterns: [], allow: [] }),
+    /**
+     * How serious each kind of content finding is: `error`, `warning`, or `off`. A kind that is not set
+     * keeps its default. A name that is not a kind fails with the name in the message.
+     */
+    check: z
+      .record(z.string(), z.enum(["error", "warning", "off"]))
+      .superRefine((kinds, context) => {
+        for (const name of Object.keys(kinds)) {
+          if (!isFindingKind(name)) {
+            context.addIssue({
+              code: "custom",
+              path: [name],
+              message: `"${name}" is not a kind of finding. The kinds are ${FINDING_KINDS.join(", ")}.`,
+            });
+          }
+        }
+      })
+      .default({}),
+    /**
+     * Values a page can write as `{{ name }}` in prose. `version` is read from the package of the repository when
+     * it is not set here. A name starts with a letter and has letters, digits, `_` and `-`.
+     */
+    vars: z
+      .record(
+        z.string().regex(/^[A-Za-z][\w-]*$/, "a variable name starts with a letter"),
+        z.string(),
+      )
+      .default({}),
     /** A llms.txt map of the site, and optionally a Markdown copy of each page. A site without the key gets neither. */
     llms: z
       .strictObject({
@@ -140,6 +170,24 @@ export const siteConfigSchema = z
         markdownPages: z.boolean().default(false),
       })
       .default({ enabled: false, optional: [], markdownPages: false }),
+    /**
+     * A link at the foot of every page to its source file on the repository host. A site without the key
+     * has no link. The host comes from `site.repository`, and `host` is for a repository on a domain of its own.
+     */
+    editLink: z
+      .strictObject({
+        enabled: z.boolean().default(false),
+        /** The branch the link opens the file on. */
+        branch: z.string().min(1).default("main"),
+        host: z.enum(EDIT_HOSTS).optional(),
+      })
+      .default({ enabled: false, branch: "main" }),
+    /** The date of the last commit that touched each page, read from git at build time. A site without the key shows none. */
+    lastUpdated: z
+      .strictObject({
+        enabled: z.boolean().default(false),
+      })
+      .default({ enabled: false }),
   })
   .superRefine((config, context) => {
     const known = new Set([...config.collections.map((entry) => entry.id), "changelog"]);

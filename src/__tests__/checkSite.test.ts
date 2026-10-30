@@ -1,7 +1,8 @@
-import { checkSite } from "../application";
+import { checkSite, isSafeToPublish } from "../application";
 import type { CheckDeps } from "../application";
+import { buildDocuments } from "../../template/src/application";
 import { parseSiteConfig } from "../../template/src/domain";
-import type { Document, SourceFile } from "../../template/src/domain";
+import type { Document, ReusableIssue, SourceFile } from "../../template/src/domain";
 import { fakeEnv, MemoryFileSystem } from "./support/memory";
 
 const ROOT = "/work/widget";
@@ -13,6 +14,7 @@ const config = (
   llms: Record<string, unknown> = {},
   base = "/",
   search: boolean = true,
+  options: Record<string, unknown> = {},
 ) =>
   parseSiteConfig({
     site: {
@@ -27,6 +29,7 @@ const config = (
     anonymize,
     llms,
     search: { enabled: search },
+    ...options,
   });
 
 const doc = (path: string, content: string): SourceFile => ({
@@ -48,6 +51,9 @@ function run(options: {
   dist?: Record<string, string>;
   search?: boolean;
   routes?: string[];
+  existing?: string[];
+  config?: Record<string, unknown>;
+  shallow?: boolean;
 }) {
   const fs = new MemoryFileSystem(
     options.dist
@@ -56,7 +62,7 @@ function run(options: {
   );
   const deps: CheckDeps = {
     fs,
-    env: fakeEnv({ visibility: options.visibility ?? "public" }),
+    env: fakeEnv({ visibility: options.visibility ?? "public", shallow: options.shallow }),
     loadContent: () => ({
       config: config(
         options.deploy,
@@ -64,10 +70,12 @@ function run(options: {
         options.llms,
         options.base,
         options.search ?? true,
+        options.config,
       ),
       files: options.files ?? [doc("docs/a.md", "# A\n\nFine.")],
       documents: options.documents ?? [],
       routes: options.routes ?? ["/docs/a/"],
+      existing: new Set(options.existing ?? []),
     }),
   };
   return checkSite(deps, { root: ROOT, siteDir: "site", dist: options.dist ? "/dist" : undefined });
@@ -86,6 +94,69 @@ const goodDist = {
   "docs/a/index.html": page("A"),
   "search-index.json": indexOf(["/docs/a/"]),
 };
+
+describe("checkSite variables and snippets", () => {
+  const withIssues = (issues: ReusableIssue[]): SourceFile => ({
+    ...doc("docs/a.md", "# A\n\nFine."),
+    reusableIssues: issues,
+  });
+  const unknown: ReusableIssue = {
+    kind: "variables",
+    file: "docs/a.md",
+    line: 3,
+    message: 'Unknown variable "ghost".',
+  };
+  const missing: ReusableIssue = {
+    kind: "snippets",
+    file: "docs/a.md",
+    line: 5,
+    message: 'Snippet "nope.md" was not found.',
+  };
+
+  it("reports an unknown variable as a warning and a missing snippet as an error, with file and line", () => {
+    const report = run({ files: [withIssues([unknown, missing])] });
+    expect(report.content).toEqual([
+      expect.objectContaining({
+        kind: "variables",
+        severity: "warning",
+        file: "docs/a.md",
+        line: 3,
+      }),
+      expect.objectContaining({ kind: "snippets", severity: "error", file: "docs/a.md", line: 5 }),
+    ]);
+    expect(isSafeToPublish(report)).toBe(false);
+  });
+
+  it("passes with a warning only, so an unknown variable does not stop the site", () => {
+    expect(isSafeToPublish(run({ files: [withIssues([unknown])] }))).toBe(true);
+  });
+
+  it("follows check.<kind> in the config, and does not look for a kind that is off", () => {
+    const check = { check: { variables: "off", snippets: "warning" } };
+    const report = run({ files: [withIssues([unknown, missing])], config: check });
+    expect(report.content.map((item) => [item.kind, item.severity])).toEqual([
+      ["snippets", "warning"],
+    ]);
+    expect(isSafeToPublish(report)).toBe(true);
+  });
+
+  it("reports a problem inside a snippet once, in the snippet, however many pages include it", () => {
+    const inSnippet: ReusableIssue = {
+      kind: "variables",
+      file: "snippets/requirements.md",
+      line: 2,
+      message: 'Unknown variable "ghost".',
+    };
+    const report = run({
+      files: [
+        withIssues([inSnippet]),
+        { ...doc("docs/b.md", "# B\n\nFine."), reusableIssues: [inSnippet] },
+      ],
+    });
+    expect(report.content).toHaveLength(1);
+    expect(report.content[0]).toMatchObject({ file: "snippets/requirements.md", line: 2 });
+  });
+});
 
 describe("checkSite content", () => {
   it("passes clean content", () => {
@@ -157,7 +228,13 @@ describe("checkSite built output", () => {
       {
         fs,
         env: fakeEnv(),
-        loadContent: () => ({ config: config(), files: [], documents: [], routes: [] }),
+        loadContent: () => ({
+          config: config(),
+          files: [],
+          documents: [],
+          routes: [],
+          existing: new Set<string>(),
+        }),
       },
       { root: ROOT, siteDir: "site", dist: "/nope" },
     );
@@ -384,5 +461,79 @@ describe("checkSite search index", () => {
     });
     expect(report.errors.join("\n")).toMatch(/dist\/search-index\.json: aws-access-key/);
     expect(report.errors.join("\n")).not.toContain(awsKey);
+  });
+});
+
+describe("checkSite content findings", () => {
+  const broken = doc("docs/a.md", "# A\n\n[gone](./gone.md)\n\n![flow](./flow.png)\n");
+
+  const runContent = (files: SourceFile[], existing: string[] = []) =>
+    run({ files, documents: buildDocuments(files, { base: "/" }), existing });
+
+  it("collects the findings of the markdown, each with its file and line", () => {
+    const { content } = runContent([broken]);
+    expect(
+      content.map((item) => `${item.file}:${item.line} ${item.severity} ${item.kind}`),
+    ).toEqual(["docs/a.md:3 warning links", "docs/a.md:5 error images"]);
+  });
+
+  it("is not safe to publish with an error severity finding, though `errors` stays empty", () => {
+    const report = runContent([broken]);
+    expect(report.errors).toEqual([]);
+    expect(isSafeToPublish(report)).toBe(false);
+  });
+
+  it("is safe to publish with warnings only", () => {
+    const report = runContent([doc("docs/a.md", "[gone](./gone.md)\n")]);
+    expect(report.content).toHaveLength(1);
+    expect(isSafeToPublish(report)).toBe(true);
+  });
+
+  it("is not safe to publish when an existing check fails, with clean content", () => {
+    expect(isSafeToPublish(run({ visibility: "unknown" }))).toBe(false);
+  });
+
+  it("finds an image that exists in the repository", () => {
+    expect(runContent([broken], ["docs/flow.png"]).content).toHaveLength(1);
+  });
+});
+
+describe("checkSite edit link and last updated", () => {
+  const lastUpdatedOn = { lastUpdated: { enabled: true } };
+
+  it("warns about a shallow clone when lastUpdated is on, and does not fail the site", () => {
+    const report = run({ config: lastUpdatedOn, shallow: true });
+    expect(report.warnings.join()).toMatch(/shallow clone.*fetch-depth: 0/);
+    expect(report.errors).toEqual([]);
+  });
+
+  it("says nothing about a full clone, a clone git cannot describe, or a site with the option off", () => {
+    expect(run({ config: lastUpdatedOn, shallow: false }).warnings).toEqual([]);
+    expect(run({ config: lastUpdatedOn, shallow: undefined }).warnings).toEqual([]);
+    expect(run({ shallow: true }).warnings).toEqual([]);
+  });
+
+  it("warns when the edit link is on and the repository is on a host the kit does not know", () => {
+    const own = {
+      site: {
+        name: "W",
+        description: "d",
+        url: "https://me.github.io",
+        repository: "https://git.example.org/me/widget",
+      },
+      hero: { title: "W", lede: "l", primary: { label: "Go", href: "/" } },
+      editLink: { enabled: true },
+    };
+    const report = run({
+      config: own,
+    });
+    expect(report.warnings.join()).toMatch(
+      /host of https:\/\/git\.example\.org\/me\/widget is not known/,
+    );
+    expect(report.errors).toEqual([]);
+  });
+
+  it("is quiet when the edit link is on and the host is GitHub", () => {
+    expect(run({ config: { editLink: { enabled: true } } }).warnings).toEqual([]);
   });
 });

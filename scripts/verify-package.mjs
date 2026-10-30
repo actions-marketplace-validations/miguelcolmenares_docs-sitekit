@@ -4,7 +4,7 @@
 // and asserts on the result. A problem only a consumer would see (a file missing from the tarball,
 // a wrong path, server code in the browser bundle) fails here, before publish.
 
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
@@ -49,6 +49,25 @@ function run(command, args, options = {}) {
   }
 }
 
+/** Run git in a folder with a fixed identity. A date makes the commit as old as that date. */
+const gitIn = (cwd, args, date) =>
+  run(
+    "git",
+    [
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@example.com",
+      "-c",
+      "commit.gpgsign=false",
+      ...args,
+    ],
+    {
+      cwd,
+      env: { ...process.env, ...(date ? { GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date } : {}) },
+    },
+  );
+
 const runLoud = (command, args, options = {}) =>
   execFileSync(command, args, { stdio: "inherit", ...options });
 
@@ -56,6 +75,21 @@ function listFiles(dir) {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
     entry.isDirectory() ? listFiles(join(dir, entry.name)) : [join(dir, entry.name)],
   );
+}
+
+// Line of the first line of a file that holds `needle`, starting at 1.
+function lineOf(path, needle) {
+  const index = readFileSync(path, "utf8")
+    .split("\n")
+    .findIndex((line) => line.includes(needle));
+  assert(index !== -1, `${path} has no line with ${needle}`);
+  return index + 1;
+}
+
+// Run a command and keep both streams, because the findings go to stderr and a failure must not throw.
+function capture(command, args, options = {}) {
+  const result = spawnSync(command, args, { encoding: "utf8", ...options });
+  return { status: result.status, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
 }
 
 function write(path, content) {
@@ -89,6 +123,10 @@ check("tarball has the CLI, the template, the registry and the workflow", () => 
     "template/astro.config.ts",
     "template/_github/workflows/docs.yml",
     "template/src/domain/config.ts",
+    "template/src/domain/codeBlocks.ts",
+    "template/src/infrastructure/codeBlocks.ts",
+    "template/src/presentation/code/copyCode.ts",
+    "template/src/styles/code.css",
     "template/src/presentation/components/site/Hero.astro",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md",
@@ -246,6 +284,62 @@ write(
     "",
   ].join("\n"),
 );
+write(
+  join(REPO, "docs", "tutorials", "code-blocks.md"),
+  [
+    "# Code blocks",
+    "",
+    "A title, highlighted lines, diff lines and a copy button.",
+    "",
+    "```ts",
+    "const plain = 1;",
+    "",
+    'const text = "<b>&amp;</b>";',
+    "```",
+    "",
+    '```ts title="src/config.ts"',
+    "export const config = {",
+    "  retries: 3,",
+    "};",
+    "```",
+    "",
+    "```ts {2,4-5}",
+    "const first = 1;",
+    "const second = 2;",
+    "const third = 3;",
+    "const fourth = 4;",
+    "const fifth = 5;",
+    "```",
+    "",
+    "```ts",
+    "const kept = 1;",
+    "const removed = 2; // [!code --]",
+    "const added = 3; // [!code ++]",
+    "```",
+    "",
+    "```diff",
+    "--- a/src/config.ts",
+    "+++ b/src/config.ts",
+    "@@ -1,3 +1,3 @@",
+    " export const config = {",
+    "-  retries: 3,",
+    "+  retries: 5,",
+    " };",
+    "```",
+    "",
+    '```ts title="src/endpoints.ts" {2}',
+    "export const endpoints = {",
+    "  documentation: 'https://example.com/a/very/long/path/to/the/documentation/that/keeps/going/and/going/and/going/until/it/is/wider/than/a/phone',",
+    "};",
+    "```",
+    "",
+    '```ts title="src/all.ts" {1,2}',
+    "const highlighted = 1;",
+    "const both = 2; // [!code ++]",
+    "```",
+    "",
+  ].join("\n"),
+);
 write(join(REPO, "docs", "internal", "plan.md"), "# Plan\n\nNot for the site.\n");
 write(
   join(REPO, "docs", "README.md"),
@@ -254,6 +348,33 @@ write(
 write(
   join(REPO, "docs", "tutorials", "first-steps.md"),
   "# First steps\n\nA tutorial in its own collection.\n",
+);
+// Variables and snippets: `{{ version }}` comes from package.json, `{{ package }}` from `vars` in the config.
+write(
+  join(REPO, "snippets", "requirements.md"),
+  "{{ package }} {{ version }} needs Node 22 or newer.\n",
+);
+write(join(REPO, "snippets", "steps.md"), "1. Install the package.\n2. Run the build.\n");
+write(
+  join(REPO, "docs", "tutorials", "reusable-content.md"),
+  [
+    "# Using {{ package }} {{ version }}",
+    "",
+    "<!-- include: requirements.md -->",
+    "",
+    "## Install {{ package }}",
+    "",
+    "- Do these steps:",
+    "  <!-- include: steps.md -->",
+    "",
+    "Read [the {{ package }} guide](../guide.md) next. The source writes the version as `{{ version }}`.",
+    "",
+    "```md",
+    "Version {{ version }}",
+    "<!-- include: requirements.md -->",
+    "```",
+    "",
+  ].join("\n"),
 );
 write(join(REPO, "examples", "basic", "README.md"), "# Basic example\n\nThe smallest example.\n");
 write(
@@ -295,6 +416,16 @@ check("the config comes from the repository", () => {
     `install command: ${site.installCommand}`,
   );
 });
+check("a new site has the edit link on the branch of the repository, and the dates on", () => {
+  const { editLink, lastUpdated } = JSON.parse(
+    readFileSync(join(SITE, "sitekit.config.json"), "utf8"),
+  );
+  assert(
+    editLink?.enabled === true && editLink.branch === "main",
+    `editLink: ${JSON.stringify(editLink)}`,
+  );
+  assert(lastUpdated?.enabled === true, `lastUpdated: ${JSON.stringify(lastUpdated)}`);
+});
 check("init found docs, tutorials (inside docs/) and examples, each as its own collection", () => {
   const { collections } = JSON.parse(readFileSync(join(SITE, "sitekit.config.json"), "utf8"));
   assert(
@@ -325,6 +456,7 @@ check(
       "a release does not trigger a rebuild",
     );
     assert(!workflow.includes("__SITEKIT_VERSION__"), "the version placeholder was left in");
+    assert(/fetch-depth: 0/.test(workflow), "the checkout is shallow, so no page has its own date");
     assert(!workflow.includes("configure-pages"), "it uses configure-pages");
   },
 );
@@ -379,6 +511,8 @@ write(
   join(SITE, "brands", "mark.svg"),
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 3h18v18H3z"/></svg>\n',
 );
+// The reusable content page uses this variable. `version` is not set: it is read from package.json.
+config.vars = { package: "@demo/widget" };
 config.collections[0].groups = [
   { name: "Start", tone: "brand", items: ["overview", "getting-started"] },
   { name: "Use", tone: "success", items: ["guide", "callouts"] },
@@ -410,8 +544,54 @@ check("check fails on a group that names a page that does not exist", () => {
   writeFileSync(configPath, original);
   assert(/lists "tpyo", which is not a page/.test(message), `got: ${message}`);
 });
+check("check fails on a missing snippet and names the file and line", () => {
+  const broken = join(REPO, "docs", "tutorials", "broken.md");
+  writeFileSync(broken, "# Broken\n\nText.\n\n<!-- include: nope.md -->\n");
+  let message = "";
+  try {
+    sitekit(["check"]);
+  } catch (error) {
+    message = error.stderr;
+  }
+  rmSync(broken);
+  assert(
+    /docs\/tutorials\/broken\.md:5: error: Snippet "nope\.md" was not found/.test(message),
+    `got: ${message}`,
+  );
+});
+check("check warns about an unknown variable with the file and line, and still passes", () => {
+  const warned = join(REPO, "docs", "tutorials", "warned.md");
+  writeFileSync(warned, "# Warned\n\nText.\n\nA {{ ghost }} here.\n");
+  let output;
+  try {
+    output = sitekit(["check"]);
+  } finally {
+    rmSync(warned);
+  }
+  assert(
+    /docs\/tutorials\/warned\.md:5: warning: Unknown variable "ghost"/.test(output),
+    `got: ${output}`,
+  );
+  assert(/Safe to publish/.test(output), "an unknown variable should be a warning");
+});
 check("check passes clean content", () => {
   assert(/Safe to publish/.test(sitekit(["check"])), "not safe");
+});
+check("check prints the warnings of the content with file and line, and still passes", () => {
+  const output = sitekit(["check"]);
+  const missing = lineOf(join(REPO, "docs", "getting-started.md"), "[missing page](./nope.md)");
+  const marker = lineOf(join(REPO, "docs", "callouts.md"), "> [!NOTES]");
+  assert(
+    output.includes(
+      `docs/getting-started.md:${missing}: warning: Link "./nope.md" does not match any file`,
+    ),
+    `no warning for the missing page:\n${output}`,
+  );
+  assert(
+    output.includes(`docs/callouts.md:${marker}: warning: "[!NOTES]" is not a callout marker`),
+    `no warning for the unknown marker:\n${output}`,
+  );
+  assert(/Content: 0 errors, 2 warnings\./.test(output), `no count:\n${output}`);
 });
 check("check finds a credential in the docs, masked, and passes again once it is removed", () => {
   const file = join(REPO, "docs", "guide.md");
@@ -429,15 +609,55 @@ check("check finds a credential in the docs, masked, and passes again once it is
   assert(/Safe to publish/.test(sitekit(["check"])), "still failing after removal");
 });
 
+// A git history for the dates: every file was added on 2026-01-10, and only the guide changed after that.
+gitIn(REPO, ["add", "-A"]);
+gitIn(REPO, ["commit", "-q", "-m", "Add the widget and its docs"], "2026-01-10T12:00:00Z");
+writeFileSync(
+  join(REPO, "docs", "guide.md"),
+  `${readFileSync(join(REPO, "docs", "guide.md"), "utf8")}\n## Later\n\nAdded after the first commit.\n`,
+);
+gitIn(REPO, ["add", "docs/guide.md"]);
+gitIn(REPO, ["commit", "-q", "-m", "Extend the guide"], "2026-03-15T12:00:00Z");
+check("check warns about a shallow clone when lastUpdated is on, and still passes", () => {
+  const shallow = join(WORK, "repo-shallow");
+  gitIn(WORK, ["clone", "-q", "--depth", "1", `file://${REPO}`, shallow]);
+  const output = run("node", [CLI, "check", "--root", shallow]);
+  assert(/warning: lastUpdated is on, but this is a shallow clone/.test(output), `got: ${output}`);
+  assert(/fetch-depth: 0/.test(output), "the warning does not say how to fix it");
+  assert(/Safe to publish/.test(output), "a shallow clone must warn, not fail");
+});
+check("check does not warn about a full clone", () => {
+  assert(!/shallow/.test(sitekit(["check"])), "a full clone was called shallow");
+});
+
 console.log("4/6 Install and build the generated site");
 runLoud("npm", ["ci", "--no-audit", "--no-fund"], { cwd: SITE });
-runLoud("npm", ["run", "build"], {
+const firstBuild = capture("npm", ["run", "build"], {
   cwd: SITE,
   env: { ...process.env, ASTRO_TELEMETRY_DISABLED: "1" },
 });
+process.stdout.write(firstBuild.stdout);
+process.stderr.write(firstBuild.stderr);
+assert(firstBuild.status === 0, "the build of the generated site failed");
 const dist = join(SITE, "dist");
 const read = (path) => readFileSync(join(dist, path), "utf8");
 
+check(
+  "the build prints the findings of the markdown with file and line, and does not fail on them",
+  () => {
+    const missing = lineOf(join(REPO, "docs", "getting-started.md"), "[missing page](./nope.md)");
+    assert(
+      firstBuild.stderr.includes(
+        `docs/getting-started.md:${missing}: warning: Link "./nope.md" does not match any file`,
+      ),
+      `the build did not print the missing link:\n${firstBuild.stderr}`,
+    );
+    assert(
+      /Content: 0 errors, 2 warnings\./.test(firstBuild.stderr),
+      "the build did not count them",
+    );
+  },
+);
 check("every document, example and the changelog became a page with its own title", () => {
   const expected = {
     "index.html": "widget",
@@ -446,6 +666,7 @@ check("every document, example and the changelog became a page with its own titl
     "docs/callouts/index.html": "Callouts",
     "docs/overview/index.html": "Widget documentation",
     "tutorials/first-steps/index.html": "First steps",
+    "tutorials/code-blocks/index.html": "Code blocks",
     "tutorials/index.html": "Tutorials",
     "examples/basic/index.html": "Basic example",
     "changelog/index.html": "Changelog",
@@ -458,6 +679,38 @@ check("every document, example and the changelog became a page with its own titl
     );
   }
 });
+check(
+  "variables and snippets are replaced in the page, its title, the search index, llms.txt and the Markdown copy",
+  () => {
+    const page = read("tutorials/reusable-content/index.html");
+    assert(/<title>[^<]*Using @demo\/widget 1\.2\.3[^<]*<\/title>/.test(page), "wrong title");
+    assert(page.includes("@demo/widget 1.2.3 needs Node 22 or newer."), "the snippet is missing");
+    assert(
+      /<li>Do these steps:\s*<ol>[\s\S]*Install the package\.[\s\S]*<\/ol>\s*<\/li>/.test(page),
+      "the snippet did not stay in its list item",
+    );
+    assert(page.includes("<code>{{ version }}</code>"), "a code span was replaced");
+    assert(!/<h[12][^>]*>[^<]*\{\{/.test(page), "a heading kept its variable");
+    assert(!page.includes("<!-- include"), "an include comment is in the HTML of the page");
+    const index = JSON.parse(read("search-index.json"));
+    const entry = index.pages.find(
+      (candidate) => candidate.url === "/widget/tutorials/reusable-content/",
+    );
+    assert(entry, "the page is not in the search index");
+    assert(entry.title === "Using @demo/widget 1.2.3", `index title: ${entry.title}`);
+    assert(entry.text.includes("needs Node 22 or newer"), "the index does not have the snippet");
+    assert(
+      read("llms.txt").includes(
+        "[Using @demo/widget 1.2.3](https://demo.github.io/widget/tutorials/reusable-content/): @demo/widget 1.2.3 needs Node 22 or newer.",
+      ),
+      "llms.txt does not have the replaced title and description",
+    );
+    assert(
+      read("tutorials/reusable-content/index.html.md").startsWith("# Using @demo/widget 1.2.3\n"),
+      "the Markdown copy has the old title",
+    );
+  },
+);
 check(
   "pages are grouped on the index and in the sidebar, and a nested collection is not repeated in its parent",
   () => {
@@ -486,6 +739,26 @@ check("the docs index has a filter bar built from the tags, hidden until a scrip
   assert(
     !/<div[^>]*\bdata-catalog-filter\b/.test(read("tutorials/index.html")),
     "a catalog without tags got a filter bar",
+  );
+});
+check("a page has the edit link to its file and the date of the file's own last commit", () => {
+  const guide = read("docs/guide/index.html");
+  const started = read("docs/getting-started/index.html");
+  assert(
+    guide.includes('href="https://github.com/demo/widget/edit/main/docs/guide.md"'),
+    "the guide has no edit link",
+  );
+  assert(
+    /<time datetime="2026-03-15">15 March 2026<\/time>/i.test(guide),
+    "the guide date is wrong",
+  );
+  assert(
+    /<time datetime="2026-01-10">10 January 2026<\/time>/i.test(started),
+    "the date is the last commit of the repository",
+  );
+  assert(
+    !/edit\//.test(read("index.html")) && !/<time/i.test(read("404.html")),
+    "the home page or 404 has the footer",
   );
 });
 check("an excluded file is not on the site", () => {
@@ -561,6 +834,65 @@ check(
 check("the built site has no credentials and passes check --dist", () => {
   assert(/Safe to publish/.test(sitekit(["check", "--dist", "site/dist"])), "check --dist failed");
 });
+
+// The Action builds, then runs exactly this: `check --dir <site> --dist <site>/dist`.
+check(
+  "a broken image fails the Action's check, at its line, and passes again once it is fixed",
+  () => {
+    const file = join(REPO, "docs", "guide.md");
+    const original = readFileSync(file, "utf8");
+    writeFileSync(file, `${original}\n![diagram](./img/missing.png)\n`);
+    const line = lineOf(file, "![diagram]");
+    const failed = capture("node", [CLI, "check", "--dir", "site", "--dist", "site/dist"], {
+      cwd: REPO,
+    });
+    writeFileSync(file, original);
+    assert(failed.status === 1, `check exited with ${failed.status}, not 1`);
+    assert(
+      failed.stderr.includes(
+        `docs/guide.md:${line}: error: Image "./img/missing.png" does not exist`,
+      ),
+      `the image was not reported:\n${failed.stderr}`,
+    );
+    assert(/1 problem\(s\)\. Not safe to publish/.test(failed.stdout), "no verdict");
+    assert(
+      /Safe to publish/.test(sitekit(["check", "--dir", "site", "--dist", "site/dist"])),
+      "still failing after the fix",
+    );
+  },
+);
+check(
+  "check.images in the config lowers the broken image to a warning, and an unknown kind is refused",
+  () => {
+    const file = join(REPO, "docs", "guide.md");
+    const original = readFileSync(file, "utf8");
+    const saved = readFileSync(configPath, "utf8");
+    writeFileSync(file, `${original}\n![diagram](./img/missing.png)\n`);
+    try {
+      writeFileSync(
+        configPath,
+        JSON.stringify({ ...JSON.parse(saved), check: { images: "warning" } }),
+      );
+      const lowered = capture("node", [CLI, "check"], { cwd: REPO });
+      assert(lowered.status === 0, `check exited with ${lowered.status}:\n${lowered.stderr}`);
+      assert(
+        /docs\/guide\.md:\d+: warning: Image "\.\/img\/missing\.png"/.test(lowered.stdout),
+        "not a warning",
+      );
+
+      writeFileSync(
+        configPath,
+        JSON.stringify({ ...JSON.parse(saved), check: { imagez: "error" } }),
+      );
+      const unknown = capture("node", [CLI, "check"], { cwd: REPO });
+      assert(unknown.status === 1, "an unknown kind did not fail");
+      assert(/"imagez" is not a kind of finding/.test(unknown.stderr), `got: ${unknown.stderr}`);
+    } finally {
+      writeFileSync(configPath, saved);
+      writeFileSync(file, original);
+    }
+  },
+);
 
 console.log("5/6 Components");
 check("list shows the registry", () => {
@@ -712,6 +1044,10 @@ check("the lock moved to this version, and the options keep the site as it was",
   assert(lock.sitekit === version, `the lock says ${lock.sitekit}`);
   const config = JSON.parse(readFileSync(siteFile("sitekit.config.json"), "utf8"));
   assert(config.search?.enabled === false && config.llms?.enabled === false, "options not set off");
+  assert(
+    config.editLink?.enabled === false && config.lastUpdated?.enabled === false,
+    "the edit link or the dates were turned on for a site that did not have them",
+  );
   assert(config.theme?.default === "dark", "the theme is not dark");
 });
 check("a second upgrade has nothing left to replace or add", () => {
@@ -731,6 +1067,11 @@ check("the upgraded site builds, is still without search and llms.txt, and passe
     "the site gained a search index",
   );
   assert(!existsSync(join(OLD_SITE, "dist", "llms.txt")), "the site gained llms.txt");
+  const oldPage = readFileSync(
+    join(OLD_SITE, "dist", "docs", "getting-started", "index.html"),
+    "utf8",
+  );
+  assert(!/<time|Edit this page/.test(oldPage), "the site gained the edit link or the dates");
   assert(
     /Safe to publish/.test(run("node", [CLI, "check", "--dist", "site/dist"], { cwd: OLD_REPO })),
     "check --dist failed",

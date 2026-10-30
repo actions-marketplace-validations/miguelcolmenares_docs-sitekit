@@ -81,7 +81,15 @@
         {
           "name": "Content",
           "tone": "success",
-          "items": ["content", "callouts", "deploying", "search", "llms"]
+          "items": [
+            "content",
+            "callouts",
+            "code-blocks",
+            "deploying",
+            "search",
+            "llms",
+            "edit-link"
+          ]
         }
       ]
     },
@@ -99,6 +107,16 @@
     "target": "github-pages",
     "acknowledgePublicPages": false,
     "repositoryVisibility": "public"
+  },
+  "check": {
+    "callouts": "off"
+  },
+  "editLink": {
+    "enabled": true,
+    "branch": "main"
+  },
+  "lastUpdated": {
+    "enabled": true
   },
   "llms": {
     "enabled": true,

@@ -32,7 +32,7 @@ and `--dry-run` shows what it would write.
 | Command                                 | What it does                                                                  |
 | --------------------------------------- | ----------------------------------------------------------------------------- |
 | `sitekit init [--dir site] [--dry-run]` | Create the site, its config and the deploy workflow.                          |
-| `sitekit check [--dist site/dist]`      | Scan the content and the built site, and check the repository's visibility.   |
+| `sitekit check [--dist site/dist]`      | Scan the content and the built site, report broken links, check visibility.   |
 | `sitekit list`                          | List the components.                                                          |
 | `sitekit add <component> [--force]`     | Copy a component and what it needs. A file you edited is kept.                |
 | `sitekit upgrade [--dry-run] [--apply]` | Bring a site up to the installed kit. A file you edited is never overwritten. |
@@ -133,6 +133,9 @@ HTML and code are skipped). `order: 1` in the frontmatter moves a page up.
 With the `llms` key in `sitekit.config.json`, the site also writes an `llms.txt` map of its pages and a Markdown copy of each
 one, for assistants and developer tools. It is a community proposal, not a search feature: Google Search does not use it.
 See [docs/llms.md](docs/llms.md).
+
+With the `editLink` and `lastUpdated` keys, every page ends with a link to edit its source file on the repository host and the date of
+the last commit that changed that file. A new site has both on. See [docs/edit-link.md](docs/edit-link.md).
 
 ## Theme
 

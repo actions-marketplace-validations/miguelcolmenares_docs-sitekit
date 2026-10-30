@@ -1,7 +1,9 @@
-import { publishedRoutes, buildDocuments } from "../application";
+import { buildDocuments, buildPageMeta, publishedRoutes, validateContent } from "../application";
 import { matchesAny } from "../domain";
-import type { BrandGlyph, Document, LinkContext, SiteConfig } from "../domain";
+import type { BrandGlyph, ContentFinding, Document, LinkContext, SiteConfig } from "../domain";
+import type { PageMeta } from "../application";
 import { readCustomBrands } from "./customBrands";
+import { readGitHistory } from "./gitHistory";
 import { renderMarkdown } from "./renderMarkdown";
 import type { RenderedMarkdown } from "./renderMarkdown";
 import { readSources } from "./readSources";
@@ -16,11 +18,13 @@ export interface Site {
   documents: Document[];
   /** The logos the author added to the brands folder, keyed by the icon value, for `Icon` to draw. */
   customBrands: Record<string, BrandGlyph>;
-  /** Problems found while reading links, to print once at the end of a build. */
-  warnings: string[];
+  /** Problems found in the markdown, each with a severity, a file and a line, to print once at the end of a build. */
+  findings: ContentFinding[];
   /** Join a path to the site base: `href("docs/")` becomes `/repo/docs/`. */
   href: (path: string) => string;
   render: (document: Document) => Promise<RenderedMarkdown>;
+  /** What a page shows at its foot: the address to edit its source and the date of its last change. */
+  pageMeta: (document: Document) => PageMeta;
   /** The link rules for one page, the same ones the page HTML and its Markdown copy use. */
   linkContext: (document: Document) => LinkContext;
 }
@@ -37,7 +41,12 @@ export function loadSite(siteDir: string = process.cwd()): Site {
     collections: config.collections,
   });
   const published = publishedRoutes(documents);
-  const warnings: string[] = [];
+  const findings = validateContent(sources.files, documents, {
+    config,
+    existing: sources.existing,
+  });
+  const meta = buildPageMeta(config, () => readGitHistory(sources.root));
+  for (const message of meta.warnings) console.warn(`[docs-sitekit] ${message}`);
 
   const contextFor = (document: Document): LinkContext => ({
     file: document.path,
@@ -52,14 +61,14 @@ export function loadSite(siteDir: string = process.cwd()): Site {
     version: config.site.version ?? readRepositoryVersion(sources.root),
     documents,
     customBrands: readCustomBrands(siteDir, config),
-    warnings,
+    findings,
     href: (path) => `${config.site.base}${path.replace(/^\//, "")}`,
+    pageMeta: meta.of,
     linkContext: contextFor,
     render: (document) =>
       renderMarkdown(document.body, {
         context: contextFor(document),
         base: config.site.base,
-        onWarning: (message) => warnings.push(message),
       }),
   };
   return cached;
