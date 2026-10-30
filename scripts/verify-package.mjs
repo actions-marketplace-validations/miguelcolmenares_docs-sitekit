@@ -158,6 +158,7 @@ write(
   [
     "---",
     "order: 1",
+    "tags: [Setup, Guide]",
     "---",
     "",
     "# Getting started",
@@ -190,12 +191,65 @@ write(
 );
 write(
   join(REPO, "docs", "guide.md"),
-  "# Guide\n\nThe longer guide.\n\n## Advanced\n\nAdvanced use.\n",
+  '---\ntags: [guide, Reference, "A tag of many words that has to wrap inside its button", Averyveryveryveryveryveryveryveryveryveryverylongtagwithnospaces]\n---\n\n# Guide\n\nThe longer guide.\n\n## Advanced\n\nAdvanced use.\n',
+);
+write(
+  join(REPO, "docs", "callouts.md"),
+  [
+    "---",
+    "tags: [Reference, Markdown]",
+    "---",
+    "",
+    "# Callouts",
+    "",
+    "Notes written in markdown.",
+    "",
+    "> [!NOTE]",
+    "> A note with a [link to the guide](./guide.md) and `inline code`.",
+    "",
+    "> [!TIP]",
+    "> A tip with a list:",
+    ">",
+    "> - first item",
+    "> - second item",
+    "",
+    "> [!IMPORTANT]",
+    "> Something important.",
+    "",
+    "> [!WARNING]",
+    "> A warning with code:",
+    ">",
+    "> ```ts",
+    "> export const longLine = { endpoint: 'https://example.com/a/very/long/path/that/keeps/going/and/going/and/going/until/it/is/wider/than/a/phone', retries: 3 };",
+    "> ```",
+    "",
+    "> [!CAUTION]",
+    "> Something that can cause harm.",
+    "",
+    "- A list item with a callout:",
+    "  > [!NOTE]",
+    "  > Inside the list.",
+    "",
+    "> A plain quote, not a callout.",
+    "",
+    "> [!NOTES]",
+    "> An unknown marker stays a quote.",
+    "",
+    "A marker in code stays as written:",
+    "",
+    "```markdown",
+    "> [!NOTE]",
+    "> In a code block.",
+    "```",
+    "",
+    "And in a code span: `> [!TIP]`.",
+    "",
+  ].join("\n"),
 );
 write(join(REPO, "docs", "internal", "plan.md"), "# Plan\n\nNot for the site.\n");
 write(
   join(REPO, "docs", "README.md"),
-  "# Widget documentation\n\nStart with the getting started guide.\n",
+  "---\ntags: Setup\n---\n\n# Widget documentation\n\nStart with the getting started guide.\n",
 );
 write(
   join(REPO, "docs", "tutorials", "first-steps.md"),
@@ -254,7 +308,7 @@ check("init found docs, tutorials (inside docs/) and examples, each as its own c
   );
 });
 check(
-  "the generated workflow calls the sitekit action at the version that wrote it, and rebuilds on a release",
+  "the generated workflow calls the docs-sitekit action at the version that wrote it, and rebuilds on a release",
   () => {
     const { version } = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
     const workflow = readFileSync(join(REPO, ".github", "workflows", "docs.yml"), "utf8");
@@ -306,9 +360,28 @@ const configPath = join(SITE, "sitekit.config.json");
 const config = JSON.parse(readFileSync(configPath, "utf8"));
 config.deploy.repositoryVisibility = "public";
 config.anonymize.excludePaths = ["docs/internal/**"];
+// The generated site writes llms.txt and a Markdown copy of each page, so the check and the e2e spec cover them.
+config.llms = { enabled: true, optional: ["examples"], markdownPages: true };
+// The home page shows a stat row, so the e2e measures it. One value is long on purpose: it must wrap.
+config.stats = [
+  { value: "1.2k", label: "Downloads", note: "Last 30 days" },
+  { value: "v1.2.3", label: "Version" },
+  { value: "22.23.4+", label: "Node", note: "To build the site" },
+  { value: "9".repeat(48), label: "A very long value", note: "It wraps inside its card" },
+];
+// Two brand logos on the home page: one that ships with the kit and one from the site's own brands folder.
+config.features = [
+  ...(config.features ?? []),
+  { icon: "brand:github", eyebrow: "Source", title: "On GitHub", text: "The code is public." },
+  { icon: "brand:custom/mark", eyebrow: "Mark", title: "Our own mark", text: "From brands/." },
+];
+write(
+  join(SITE, "brands", "mark.svg"),
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 3h18v18H3z"/></svg>\n',
+);
 config.collections[0].groups = [
   { name: "Start", tone: "brand", items: ["overview", "getting-started"] },
-  { name: "Use", tone: "success", items: ["guide"] },
+  { name: "Use", tone: "success", items: ["guide", "callouts"] },
 ];
 writeFileSync(configPath, JSON.stringify(config, null, 2));
 check("check fails on a page that no group lists, and says how to fix it", () => {
@@ -370,6 +443,7 @@ check("every document, example and the changelog became a page with its own titl
     "index.html": "widget",
     "docs/getting-started/index.html": "Getting started",
     "docs/guide/index.html": "Guide",
+    "docs/callouts/index.html": "Callouts",
     "docs/overview/index.html": "Widget documentation",
     "tutorials/first-steps/index.html": "First steps",
     "tutorials/index.html": "Tutorials",
@@ -398,6 +472,22 @@ check(
     assert(/>Start</.test(read("docs/guide/index.html")), "the sidebar has no group names");
   },
 );
+check("the docs index has a filter bar built from the tags, hidden until a script shows it", () => {
+  const index = read("docs/index.html");
+  const bar = /<div[^>]*\bdata-catalog-filter\b[^>]*\bhidden\b/.test(index);
+  assert(bar, "the docs index has no hidden filter bar");
+  for (const tag of ["Setup", "Guide", "Reference", "Markdown"]) {
+    assert(index.includes(`>${tag}</button>`), `no tag button for ${tag}`);
+  }
+  assert(
+    (index.match(/<a [^>]*data-filter-item/g) ?? []).length === 4,
+    "the docs index does not have four filterable cards",
+  );
+  assert(
+    !/<div[^>]*\bdata-catalog-filter\b/.test(read("tutorials/index.html")),
+    "a catalog without tags got a filter bar",
+  );
+});
 check("an excluded file is not on the site", () => {
   assert(!existsSync(join(dist, "docs", "plan")), "docs/internal/plan.md was published");
   assert(
@@ -417,6 +507,13 @@ check("relative links were rewritten, and code was left alone", () => {
   );
   assert(html.includes("./nope.md"), "a missing target should stay as written");
   assert(html.includes("[guide](./guide.md)"), "link text inside code was changed");
+});
+check("the stat row is a description list on the home page, one term per stat", () => {
+  const home = read("index.html");
+  const list = /<dl\b[^>]*>([\s\S]*?)<\/dl>/.exec(home);
+  assert(list, "the home page has no <dl>");
+  assert((list[1].match(/<dt\b/g) ?? []).length === 4, "the <dl> does not have four terms");
+  assert(list[1].includes("Downloads") && list[1].includes("Last 30 days"), "a stat is missing");
 });
 check("404.html is the not-found page, not a copy of index.html", () => {
   assert(read("404.html") !== read("index.html"), "404.html equals index.html");
@@ -491,6 +588,154 @@ check("add rejects an unknown component with a way forward", () => {
     message = error.stderr;
   }
   assert(/Unknown component "nope".*sitekit list/.test(message), `got: ${message}`);
+});
+
+console.log("5b/6 Upgrade a site made by the published 0.1.0");
+// The real 0.1.0 from the registry makes a site, and this build upgrades it. Nothing here is a copy:
+// a site made by an older release has to come out building and passing `check`.
+const OLD_TOOLS = join(WORK, "tools-0.1.0");
+const OLD_REPO = join(WORK, "repo-0.1.0");
+const OLD_SITE = join(OLD_REPO, "site");
+mkdirSync(OLD_TOOLS, { recursive: true });
+write(join(OLD_TOOLS, "package.json"), JSON.stringify({ name: "tools-old", private: true }));
+runLoud("npm", ["install", "--no-audit", "--no-fund", `${PACKAGE}@0.1.0`], { cwd: OLD_TOOLS });
+const OLD_CLI = join(OLD_TOOLS, "node_modules", PACKAGE, "dist", "cli.js");
+const oldKit = (args) => run("node", [OLD_CLI, ...args], { cwd: OLD_REPO });
+const upgrade = (args = []) => run("node", [CLI, "upgrade", ...args], { cwd: OLD_REPO });
+const gitOld = (...args) =>
+  run(
+    "git",
+    [
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@example.com",
+      "-c",
+      "commit.gpgsign=false",
+      ...args,
+    ],
+    { cwd: OLD_REPO },
+  );
+/** Every file of the old repository with its text, outside .git and node_modules. */
+const snapshotOld = () =>
+  Object.fromEntries(
+    listFiles(OLD_REPO)
+      .filter((file) => !/[\\/](\.git|node_modules|dist|\.astro)[\\/]/.test(file))
+      .map((file) => [file.slice(OLD_REPO.length + 1), readFileSync(file, "utf8")]),
+  );
+const siteFile = (path) => join(OLD_SITE, path);
+
+mkdirSync(OLD_REPO, { recursive: true });
+run("git", ["init", "-q", "-b", "main"], { cwd: OLD_REPO });
+run("git", ["remote", "add", "origin", "https://github.com/demo/widget.git"], { cwd: OLD_REPO });
+write(
+  join(OLD_REPO, "package.json"),
+  JSON.stringify({
+    name: "@demo/widget",
+    version: "1.2.3",
+    description: "A widget.",
+    license: "MIT",
+  }),
+);
+write(join(OLD_REPO, "README.md"), "# Widget\n\nA widget that does widget things.\n");
+write(join(OLD_REPO, "LICENSE"), "MIT License\n");
+write(join(OLD_REPO, "docs", "getting-started.md"), "# Getting started\n\nInstall the widget.\n");
+write(join(OLD_REPO, "CHANGELOG.md"), "# Changelog\n\n## [1.2.3] - 2026-10-28\n\n- Everything.\n");
+oldKit(["init"]);
+
+// The owner's edits: one file the kit has not changed since 0.1.0, and one it has.
+const KEPT = "src/domain/glob.ts";
+const CONFLICT = "src/styles/prose.css";
+const REPLACED = "src/domain/describe.ts";
+const CURRENT_TEMPLATE = join(ROOT, "template");
+const templateText = (path) => readFileSync(join(CURRENT_TEMPLATE, path), "utf8");
+const oldConfig = JSON.parse(readFileSync(siteFile("sitekit.config.json"), "utf8"));
+oldConfig.deploy.repositoryVisibility = "public";
+writeFileSync(siteFile("sitekit.config.json"), JSON.stringify(oldConfig, null, 2));
+const keptText = `${readFileSync(siteFile(KEPT), "utf8")}// my own change\n`;
+const conflictText = `${readFileSync(siteFile(CONFLICT), "utf8")}\n/* my own styles */\n`;
+writeFileSync(siteFile(KEPT), keptText);
+writeFileSync(siteFile(CONFLICT), conflictText);
+
+check("the site made by 0.1.0 has a lock at 0.1.0 and none of the newer options", () => {
+  const lock = JSON.parse(readFileSync(siteFile(".sitekit.json"), "utf8"));
+  assert(lock.sitekit === "0.1.0", `the lock says ${lock.sitekit}`);
+  assert(!("search" in oldConfig) && !("theme" in oldConfig), "the old config has the new keys");
+});
+check("with uncommitted changes the upgrade is a dry run by default, and writes nothing", () => {
+  const before = snapshotOld();
+  const output = upgrade();
+  assert(/uncommitted changes/.test(output) && /dry run/i.test(output), `got: ${output}`);
+  assert(
+    JSON.stringify(snapshotOld()) === JSON.stringify(before),
+    "the dry run by default changed files",
+  );
+});
+gitOld("add", "-A");
+gitOld("commit", "-q", "-m", "A site made by 0.1.0");
+check("--dry-run reports the four cases and writes nothing", () => {
+  const before = snapshotOld();
+  const output = upgrade(["--dry-run"]);
+  assert(JSON.stringify(snapshotOld()) === JSON.stringify(before), "--dry-run changed files");
+  assert(output.includes(`site/${REPLACED} (would be replaced)`), `got: ${output}`);
+  assert(output.includes(`site/${KEPT} (you changed it, the kit did not, kept)`), `got: ${output}`);
+  assert(output.includes(`! site/${CONFLICT}`), `got: ${output}`);
+  assert(/\+ site\/src\/domain\/llms\.ts \(would be added\)/.test(output), `got: ${output}`);
+});
+check("the upgrade replaces, keeps, adds and leaves the conflict for the owner to merge", () => {
+  const before = snapshotOld();
+  const output = upgrade();
+  assert(/Upgrading site\/ from 0\.1\.0 to /.test(output), `got: ${output}`);
+  assert(readFileSync(siteFile(REPLACED), "utf8") === templateText(REPLACED), "not replaced");
+  assert(readFileSync(siteFile(KEPT), "utf8") === keptText, "the owner's file was changed");
+  assert(readFileSync(siteFile(CONFLICT), "utf8") === conflictText, "the owner's file was lost");
+  assert(
+    readFileSync(siteFile(`${CONFLICT}.sitekit-new`), "utf8") === templateText(CONFLICT),
+    "the new version is not next to the owner's file",
+  );
+  assert(existsSync(siteFile("src/domain/llms.ts")), "a new file was not added");
+  const after = snapshotOld();
+  const touched = Object.keys({ ...before, ...after }).filter(
+    (path) => before[path] !== after[path],
+  );
+  const outside = touched.filter((path) => !path.startsWith("site/"));
+  assert(outside.length === 0, `changed outside the site: ${outside.join(", ")}`);
+  assert(
+    before["docs/getting-started.md"] === after["docs/getting-started.md"] &&
+      before["CHANGELOG.md"] === after["CHANGELOG.md"],
+    "content changed",
+  );
+});
+check("the lock moved to this version, and the options keep the site as it was", () => {
+  const { version } = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
+  const lock = JSON.parse(readFileSync(siteFile(".sitekit.json"), "utf8"));
+  assert(lock.sitekit === version, `the lock says ${lock.sitekit}`);
+  const config = JSON.parse(readFileSync(siteFile("sitekit.config.json"), "utf8"));
+  assert(config.search?.enabled === false && config.llms?.enabled === false, "options not set off");
+  assert(config.theme?.default === "dark", "the theme is not dark");
+});
+check("a second upgrade has nothing left to replace or add", () => {
+  const output = upgrade(["--apply"]);
+  assert(/0 replaced, 0 added/.test(output), `got: ${output}`);
+  assert(output.includes(`! site/${CONFLICT}`), "the conflict is gone before it was merged");
+});
+runLoud("npm", ["ci", "--no-audit", "--no-fund"], { cwd: OLD_SITE });
+runLoud("npm", ["run", "build"], {
+  cwd: OLD_SITE,
+  env: { ...process.env, ASTRO_TELEMETRY_DISABLED: "1" },
+});
+check("the upgraded site builds, is still without search and llms.txt, and passes check", () => {
+  assert(existsSync(join(OLD_SITE, "dist", "index.html")), "no index.html");
+  assert(
+    !existsSync(join(OLD_SITE, "dist", "search-index.json")),
+    "the site gained a search index",
+  );
+  assert(!existsSync(join(OLD_SITE, "dist", "llms.txt")), "the site gained llms.txt");
+  assert(
+    /Safe to publish/.test(run("node", [CLI, "check", "--dist", "site/dist"], { cwd: OLD_REPO })),
+    "check --dist failed",
+  );
+  assert(/Safe to publish/.test(run("node", [CLI, "check"], { cwd: OLD_REPO })), "check failed");
 });
 
 console.log("6/6 Done");

@@ -39,6 +39,14 @@ describe("initSite", () => {
     );
   });
 
+  it("writes the search key, on, so a new site has search and says so in its config", () => {
+    const { fs, run } = setup();
+    run();
+    expect(JSON.parse(fs.readText(`${ROOT}/site/sitekit.config.json`)).search).toEqual({
+      enabled: true,
+    });
+  });
+
   it("derives the config from the repository", () => {
     const { fs, run } = setup();
     const { config } = run();
@@ -49,6 +57,16 @@ describe("initSite", () => {
       installCommand: "npm install @me/widget",
     });
     expect(JSON.parse(fs.readText(`${ROOT}/site/sitekit.config.json`)).site.name).toBe("widget");
+  });
+
+  it("writes the llms key on for a new site, with no optional collections and no Markdown pages", () => {
+    const { fs, run } = setup();
+    run();
+    expect(JSON.parse(fs.readText(`${ROOT}/site/sitekit.config.json`)).llms).toEqual({
+      enabled: true,
+      optional: [],
+      markdownPages: false,
+    });
   });
 
   it("writes only inside the site folder, even when the repository has a src/ of its own", () => {

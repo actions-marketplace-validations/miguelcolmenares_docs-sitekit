@@ -1,16 +1,32 @@
 import { z } from "zod";
+import { iconProblem } from "./brands";
 
 const link = z.strictObject({
   label: z.string().min(1),
   href: z.string().min(1),
 });
 
+/**
+ * An icon: the name of a lucide icon in kebab-case (`shield-check`), a brand logo that ships with the
+ * kit (`brand:github`), or a logo the author added to the brands folder (`brand:custom/my-logo`).
+ * An unknown brand fails with its slug and the closest ones.
+ */
+export const iconName = z.string().superRefine((value, context) => {
+  const problem = iconProblem(value);
+  if (problem) context.addIssue({ code: "custom", message: problem });
+});
+
 const feature = z.strictObject({
-  /** Name of a lucide icon, in kebab-case, for example `shield-check`. */
-  icon: z.string().regex(/^[a-z0-9-]+$/),
+  icon: iconName,
   eyebrow: z.string().min(1),
   title: z.string().min(1),
   text: z.string().min(1),
+});
+
+const stat = z.strictObject({
+  value: z.string().min(1),
+  label: z.string().min(1),
+  note: z.string().min(1).optional(),
 });
 
 const tone = z.enum(["neutral", "brand", "success", "warn"]);
@@ -66,8 +82,22 @@ export const siteConfigSchema = z
       secondary: link.optional(),
     }),
     features: z.array(feature).default([]),
+    /** Two to five numbers under the hero, each with a label. Written by hand: the kit fetches nothing. */
+    stats: z
+      .array(stat)
+      .refine((stats) => stats.length === 0 || (stats.length >= 2 && stats.length <= 5), {
+        message: "stats takes two to five items, or none",
+      })
+      .default([]),
     nav: z.array(link).default([]),
     footer: z.strictObject({ links: z.array(link).default([]) }).default({ links: [] }),
+    /** The color theme a visitor sees first. A visitor's own choice, saved in the browser, wins over it. */
+    theme: z
+      .strictObject({
+        /** `dark` (the default), `light`, or `system`, which follows the operating system. */
+        default: z.enum(["dark", "light", "system"]).default("dark"),
+      })
+      .default({ default: "dark" }),
     /** Where the repository is, relative to the site folder, and its changelog. */
     sources: z
       .strictObject({
@@ -87,6 +117,12 @@ export const siteConfigSchema = z
         repositoryVisibility: z.enum(["public", "private", "internal"]).optional(),
       })
       .default({ target: "github-pages", acknowledgePublicPages: false }),
+    /** The search dialog and its index. Off, the site has no search button, no dialog and no `search-index.json`. */
+    search: z
+      .strictObject({
+        enabled: z.boolean().default(true),
+      })
+      .default({ enabled: true }),
     anonymize: z
       .strictObject({
         excludePaths: z.array(z.string()).default([]),
@@ -95,8 +131,28 @@ export const siteConfigSchema = z
         allow: z.array(z.string()).default([]),
       })
       .default({ excludePaths: [], replace: {}, denyPatterns: [], allow: [] }),
+    /** A llms.txt map of the site, and optionally a Markdown copy of each page. A site without the key gets neither. */
+    llms: z
+      .strictObject({
+        enabled: z.boolean().default(false),
+        /** Collection ids whose pages go under `## Optional`. `changelog` is accepted too. */
+        optional: z.array(z.string().min(1)).default([]),
+        markdownPages: z.boolean().default(false),
+      })
+      .default({ enabled: false, optional: [], markdownPages: false }),
   })
   .superRefine((config, context) => {
+    const known = new Set([...config.collections.map((entry) => entry.id), "changelog"]);
+    config.llms.optional.forEach((id, index) => {
+      if (!known.has(id)) {
+        context.addIssue({
+          code: "custom",
+          path: ["llms", "optional", index],
+          message: `llms.optional names "${id}", which is not a collection of this site.`,
+        });
+      }
+    });
+
     const seen = new Set<string>();
     config.collections.forEach((entry, index) => {
       if (RESERVED_IDS.includes(entry.id)) {
@@ -123,8 +179,12 @@ export type SiteConfig = z.infer<typeof siteConfigSchema>;
 export type CollectionConfig = z.infer<typeof collection>;
 /** A labelled link, used in the navigation and the footer. */
 export type NavLink = z.infer<typeof link>;
+/** The color theme a site starts with. */
+export type ThemeDefault = SiteConfig["theme"]["default"];
 /** One card of the home page features section. */
 export type Feature = z.infer<typeof feature>;
+/** One number of the home page stat row. */
+export type Stat = z.infer<typeof stat>;
 
 /** Validate a parsed `sitekit.config.json`. Throws a readable error listing every problem. */
 export function parseSiteConfig(input: unknown): SiteConfig {

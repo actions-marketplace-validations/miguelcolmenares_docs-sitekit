@@ -1,9 +1,18 @@
 import { parseArgs } from "node:util";
 import { resolve } from "node:path";
-import { addComponent, checkSite, initSite, listComponents } from "../application";
+import {
+  addComponent,
+  checkSite,
+  initSite,
+  listComponents,
+  NEW_VERSION_SUFFIX,
+  upgradeSite,
+} from "../application";
+import type { UpgradeResult } from "../application";
 // Deep imports on purpose: the template infrastructure barrel also exports the markdown renderer,
 // which belongs to the generated site and must not end up in this CLI.
 import { buildDocuments } from "../../template/src/application/buildDocuments";
+import { readCustomBrands } from "../../template/src/infrastructure/customBrands";
 import { readSources } from "../../template/src/infrastructure/readSources";
 import { loadSiteConfig } from "../../template/src/infrastructure/siteConfig";
 import { nodeEnvironment, nodeFileSystem, packagedTemplate, sha256 } from "../infrastructure";
@@ -17,13 +26,14 @@ export interface CliIo {
   templateRoot: string;
 }
 
-const HELP = `sitekit: documentation sites for GitHub Pages
+const HELP = `docs-sitekit: documentation sites for GitHub Pages
 
 Usage
   sitekit init    [--dir site] [--name <text>] [--description <text>] [--force] [--dry-run]
   sitekit check   [--dir site] [--dist <folder>]
   sitekit list
   sitekit add <component> [--dir site] [--force]
+  sitekit upgrade [--dir site] [--dry-run] [--apply]
 
 Options
   --root <folder>   Repository to work on. Defaults to the current folder.
@@ -86,9 +96,19 @@ export function runCli(argv: string[], io: CliIo): number {
             loadContent: (siteAbs) => {
               const config = loadSiteConfig(siteAbs);
               const { files } = readSources(siteAbs, config);
+              // A custom logo with no file, or a file that is not a plain SVG, fails here and not only in the build.
+              readCustomBrands(siteAbs, config);
               // Builds the pages only to validate them: two files on one route, or a page in no group, throw here.
-              buildDocuments(files, { base: config.site.base, collections: config.collections });
-              return { config, files };
+              const documents = buildDocuments(files, {
+                base: config.site.base,
+                collections: config.collections,
+              });
+              return {
+                config,
+                files,
+                documents,
+                routes: documents.map((document) => document.route),
+              };
             },
           },
           { root, siteDir, dist: values.dist ? resolve(io.cwd, values.dist) : undefined },
@@ -124,6 +144,14 @@ export function runCli(argv: string[], io: CliIo): number {
           io.out(`\nInstall in ${siteDir}/: npm install ${result.missingPackages.join(" ")}\n`);
         return 0;
       }
+      case "upgrade": {
+        const result = upgradeSite(
+          { fs: nodeFileSystem, env: nodeEnvironment, template, hash: sha256 },
+          { root, siteDir, dryRun: values["dry-run"], apply: values.apply },
+        );
+        io.out(describeUpgrade(result, siteDir));
+        return 0;
+      }
       default:
         io.err(`Unknown command "${command}".\n\n${HELP}`);
         return 2;
@@ -132,6 +160,65 @@ export function runCli(argv: string[], io: CliIo): number {
     io.err(`error: ${(error as Error).message}\n`);
     return 1;
   }
+}
+
+/** The report `sitekit upgrade` prints: what happened to each file, and what to do next. */
+function describeUpgrade(result: UpgradeResult, siteDir: string): string {
+  const lines: string[] = [];
+  const versions =
+    result.from === result.to ? `at ${result.to}` : `from ${result.from} to ${result.to}`;
+  lines.push(`Upgrading ${siteDir}/ ${versions}.`);
+  if (result.dryRunReason === "uncommitted-changes") {
+    lines.push(
+      "The working tree has uncommitted changes, so this is a dry run and nothing was written.",
+      "Commit or stash them and run `sitekit upgrade` again, or pass --apply to write anyway.",
+    );
+  } else if (result.dryRun) {
+    lines.push("Dry run: nothing was written.");
+  }
+  lines.push("");
+  const now = result.dryRun;
+  for (const file of result.replaced) lines.push(`  ✓ ${file} (${now ? "would be " : ""}replaced)`);
+  for (const file of result.added) lines.push(`  + ${file} (${now ? "would be " : ""}added)`);
+  for (const file of result.kept) lines.push(`  = ${file} (you changed it, the kit did not, kept)`);
+  for (const file of result.conflicts)
+    lines.push(
+      `  ! ${file} (you and the kit both changed it, left as it is; the new version ${now ? "would be" : "is"} in ${file}${NEW_VERSION_SUFFIX})`,
+    );
+  for (const file of result.deleted) lines.push(`  - ${file} (you deleted it, not brought back)`);
+  for (const file of result.retired)
+    lines.push(`  ~ ${file} (no longer in the kit, left as it is)`);
+  for (const option of result.options)
+    lines.push(
+      `  + ${siteDir}/sitekit.config.json: "${option.key}": ${JSON.stringify(option.value)} (${now ? "would keep" : "keeps"} the site as it was)`,
+    );
+  lines.push(
+    "",
+    `${result.replaced.length} replaced, ${result.added.length} added, ${result.kept.length} kept, ${result.conflicts.length} to merge, ${result.unchanged.length} already current.`,
+  );
+
+  const next: string[] = [];
+  if (result.dryRun) next.push("Run `sitekit upgrade` to apply these changes.");
+  else {
+    if (result.replaced.length + result.added.length > 0)
+      next.push(
+        `Run \`npm install\` in ${siteDir}/, then \`npm run build\` and \`sitekit check\`.`,
+      );
+    if (result.conflicts.length > 0)
+      next.push(
+        `Merge each ${NEW_VERSION_SUFFIX} file into your own (diff the two), then delete the ${NEW_VERSION_SUFFIX} file.`,
+      );
+  }
+  if (result.options.length > 0 && !result.dryRun)
+    next.push(
+      `Review the options added to ${siteDir}/sitekit.config.json, and turn on the features you want.`,
+    );
+  if (result.workflowPinned)
+    next.push(
+      `${result.workflowPinned} still pins ${result.from}. Change it to ${result.to} yourself, the upgrade does not edit it.`,
+    );
+  if (next.length > 0) lines.push("", "Next:", ...next.map((step) => `  ${step}`));
+  return `${lines.join("\n")}\n`;
 }
 
 function parse(argv: string[]) {
@@ -146,6 +233,7 @@ function parse(argv: string[]) {
       dist: { type: "string" },
       force: { type: "boolean", default: false },
       "dry-run": { type: "boolean", default: false },
+      apply: { type: "boolean", default: false },
       help: { type: "boolean", short: "h", default: false },
       version: { type: "boolean", short: "v", default: false },
     },

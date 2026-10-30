@@ -2,7 +2,7 @@
   "site": {
     "name": "sitekit",
     "description": "Design system and scaffold for documentation microsites on GitHub Pages.",
-    "url": "https://miguelcolmenares.github.io",
+    "url": "https://miguelcolmenares.com",
     "base": "/docs-sitekit/",
     "repository": "https://github.com/miguelcolmenares/docs-sitekit",
     "license": "MIT",
@@ -11,7 +11,7 @@
   "hero": {
     "badge": "Astro \u00b7 Tailwind \u00b7 shadcn/ui \u00b7 lucide",
     "title": "Documentation sites that look like a product.",
-    "lede": "A dark design system, a content pipeline that reads your repository, and a scaffold that publishes to GitHub Pages. MIT licensed.",
+    "lede": "A design system with a light and a dark theme, a content pipeline that reads your repository, and a scaffold that publishes to GitHub Pages. MIT licensed.",
     "primary": {
       "label": "Get started",
       "href": "/docs/getting-started/"
@@ -21,6 +21,16 @@
       "href": "/docs/components/"
     }
   },
+  "stats": [
+    { "value": "2", "label": "Themes", "note": "Dark and light, with a switch in the header." },
+    { "value": "3", "label": "Phone widths tested", "note": "320, 360 and 390 px, plus desktop." },
+    {
+      "value": "4",
+      "label": "Layers",
+      "note": "Domain, application, infrastructure and presentation."
+    },
+    { "value": "MIT", "label": "License", "note": "Written from scratch." }
+  ],
   "features": [
     {
       "icon": "layers",
@@ -44,7 +54,7 @@
       "icon": "zap",
       "eyebrow": "Fast by default",
       "title": "Static HTML, almost no JavaScript",
-      "text": "Every route is a real HTML file with its own title. Only the copy buttons and the mobile menu ship JavaScript."
+      "text": "Every route is a real HTML file with its own title. Only the copy buttons, the mobile menu and search (loaded on demand) ship JavaScript."
     }
   ],
   "sources": {
@@ -61,17 +71,17 @@
         {
           "name": "Start",
           "tone": "brand",
-          "items": ["getting-started"]
+          "items": ["getting-started", "upgrading"]
         },
         {
           "name": "Design system",
           "tone": "neutral",
-          "items": ["components", "design-tokens"]
+          "items": ["components", "brand-logos", "design-tokens"]
         },
         {
           "name": "Content",
           "tone": "success",
-          "items": ["content", "deploying"]
+          "items": ["content", "callouts", "deploying", "search", "llms"]
         }
       ]
     },
@@ -82,9 +92,17 @@
       "lede": "Working examples you can copy and adapt."
     }
   ],
+  "search": {
+    "enabled": true
+  },
   "deploy": {
     "target": "github-pages",
     "acknowledgePublicPages": false,
     "repositoryVisibility": "public"
+  },
+  "llms": {
+    "enabled": true,
+    "optional": ["examples"],
+    "markdownPages": true
   }
 }

@@ -14,6 +14,10 @@ The title is the `title` in the frontmatter, else the first `#` heading, else th
 
 Pages sort by file name. Put `order: 1` in the frontmatter to move a page up.
 
+## Tags
+
+Put `tags` in the frontmatter, a list or one comma separated string, and the index page of the collection gets a filter bar with a button per tag. Tags are trimmed, and `UI` and `ui` are the same tag. See [CatalogFilter](./components.md#catalogfilter).
+
 ## Links
 
 Write ordinary relative links, the ones that also work on GitHub.
@@ -26,6 +30,10 @@ Write ordinary relative links, the ones that also work on GitHub.
 | A file that does not exist                | Left as written, with a warning     |
 
 Links inside code are never touched.
+
+## Callouts
+
+Start a blockquote with `> [!NOTE]`, `> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]` or `> [!CAUTION]` on a line of its own, the alert syntax that GitHub also renders, and it becomes a callout with its own icon, color and visible label. The marker line is removed, and the rest can hold paragraphs, lists and code. A blockquote without a marker, or with a name that is not one of these five, stays a plain blockquote, and a marker inside code is never touched. See [Callouts](./callouts.md) for each kind.
 
 ## Exclude and replace
 

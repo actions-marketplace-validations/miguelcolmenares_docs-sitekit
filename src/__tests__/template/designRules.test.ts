@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
 
 const SRC = join(__dirname, "..", "..", "..", "template", "src");
@@ -36,6 +36,15 @@ describe("design rules, enforced", () => {
     expect(offenders.map(name)).toEqual([]);
   });
 
+  it("accent-strong is never a text color: it fills, rings and borders only (4.41:1 on the page)", () => {
+    const strongAsText =
+      /\btext-(brand-strong|ring)\b|\btext-\(--sk-accent-strong\)|\btext-\[var\(--sk-accent-strong\)\]|\bcolor\s*:\s*var\(--sk-accent-strong\)/;
+    const offenders = files(SRC, /\.(tsx|astro|css)$/).filter((file) =>
+      strongAsText.test(read(file)),
+    );
+    expect(offenders.map(name)).toEqual([]);
+  });
+
   it("status colors are chosen only in ToneBadge and Callout", () => {
     const allowed = new Set(["ToneBadge.tsx", "Callout.tsx"]);
     const offenders = siteFiles.filter(
@@ -52,6 +61,19 @@ describe("design rules, enforced", () => {
       /loadSite|readSources|@\/infrastructure\/(?!cn\b)|\.\.\/infrastructure/.test(read(file)),
     );
     expect(offenders.map(name)).toEqual([]);
+  });
+
+  it("grids have explicit tracks: no auto-fit or auto-fill in site components", () => {
+    const offenders = siteFiles.filter((file) =>
+      /grid-cols-\[[^\]]*auto-(fit|fill)|repeat\(\s*auto-(fit|fill)/.test(read(file)),
+    );
+    expect(offenders.map(name)).toEqual([]);
+  });
+
+  it("the stat row is a description list, and it chooses no status color", () => {
+    const source = read(join(SRC, "presentation", "components", "site", "StatRow.tsx"));
+    expect(source).toMatch(/<dl\b/);
+    expect(source).not.toMatch(/\b(text|bg|border)-(success|warn|danger|destructive)\b/);
   });
 
   it("interactive controls are sized for touch: no h-6 or smaller buttons in site components", () => {
@@ -72,9 +94,35 @@ describe("design rules, enforced", () => {
       (file) => `src/${relative(SRC, file)}`,
     );
     expect(shipped.filter((file) => !listed.has(file))).toEqual([]);
+    // A component may list the files it needs outside the components folder, such as `cn` or a script.
+    // Those are not components, but they must exist, so `add` never copies a file the template lacks.
     expect(
-      [...listed].filter((file) => !shipped.includes(file) && !file.endsWith("cn.ts")),
+      [...listed].filter(
+        (file) =>
+          !shipped.includes(file) && !(file.endsWith("cn.ts") || existsSync(join(SRC, "..", file))),
+      ),
     ).toEqual([]);
+  });
+
+  it("the catalog filter is hidden without JavaScript, announces politely and sizes every control for touch", () => {
+    const source = read(join(SRC, "presentation", "components", "site", "CatalogFilter.astro"));
+    expect(source).toMatch(/<div data-catalog-filter hidden/);
+    expect(source).toMatch(/role="status"/);
+    expect(source).toMatch(/aria-live="polite"/);
+    expect(source).toMatch(/aria-pressed="false"/);
+    expect(source).toMatch(/<label for="catalog-filter-text"/);
+    // Every control has a 44px floor: the shared class of the buttons, and the height of the field.
+    expect(source).toMatch(/min-h-11 min-w-11/);
+    expect(source).toMatch(/<input[^>]*[\s\S]*?class="[^"]*\bh-11\b/);
+    expect(source).not.toMatch(/\b(text|bg|border)-(success|warn|danger|destructive)\b/);
+  });
+
+  it("the filter script hides cards with the hidden attribute and keeps its state in the address", () => {
+    const script = read(join(SRC, "presentation", "filter", "catalogFilter.ts"));
+    expect(script).toMatch(/\.hidden = /);
+    expect(script).toMatch(/history\.pushState/);
+    expect(script).toMatch(/history\.replaceState/);
+    expect(script).toMatch(/popstate/);
   });
 
   it("every npm package a registry file imports is declared in the template package.json", () => {
@@ -101,5 +149,32 @@ describe("design rules, enforced", () => {
       }
     }
     expect(missing).toEqual([]);
+  });
+  it("brand logos come from the module in the repository: no package, no CDN and no host in any source", () => {
+    const manifest = read(join(SRC, "..", "package.json"));
+    expect(manifest).not.toMatch(/simple-icons|simpleicons|iconify|devicon|svgl/i);
+    const sources = files(SRC, /\.(tsx?|astro|css)$/).filter(
+      (file) => !file.endsWith("brandData.ts"),
+    );
+    const offenders = sources.filter((file) =>
+      /from\s+["']simple-icons|cdn\.simpleicons|simpleicons\.org\/icons|cdn\.jsdelivr|unpkg\.com|cdnjs|api\.iconify|raw\.githubusercontent/i.test(
+        read(file),
+      ),
+    );
+    expect(offenders.map(name)).toEqual([]);
+  });
+
+  it("the repository button and the footer link are 44px targets on a phone", () => {
+    const header = read(join(SRC, "presentation", "components", "site", "SiteHeader.astro"));
+    const menu = read(join(SRC, "presentation", "components", "site", "MobileMenu.tsx"));
+    const footer = read(join(SRC, "presentation", "components", "site", "SiteFooter.tsx"));
+    for (const [source, anchor] of [
+      [header, "data-repository-button"],
+      [menu, "data-repository-button"],
+    ] as const) {
+      const tag = source.slice(source.indexOf(anchor), source.indexOf(anchor) + 400);
+      expect(tag).toMatch(/\bmin-h-11\b/);
+    }
+    expect(footer).toMatch(/min-h-11[^"]*md:min-h-8/);
   });
 });
