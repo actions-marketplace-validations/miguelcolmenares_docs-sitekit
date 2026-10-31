@@ -74,9 +74,36 @@
           "items": ["getting-started", "configuration", "upgrading"]
         },
         {
+          "name": "Options by topic",
+          "tone": "brand",
+          "items": [
+            "options",
+            "options-identity",
+            "options-navigation",
+            "options-theme",
+            "options-search-llms",
+            "options-checks",
+            "options-edit-link",
+            "options-brand-logos"
+          ]
+        },
+        {
+          "name": "Extending your site",
+          "tone": "success",
+          "items": [
+            "extending",
+            "extend-tool-page",
+            "extend-collection",
+            "extend-component",
+            "extend-tokens",
+            "extend-brand-and-layout",
+            "extend-safe-build"
+          ]
+        },
+        {
           "name": "Design system",
           "tone": "neutral",
-          "items": ["components", "brand-logos", "design-tokens", "detail-page"]
+          "items": ["components", "brand-logos", "design-tokens", "detail-page", "performance"]
         },
         {
           "name": "Content",
@@ -94,6 +121,39 @@
       ]
     },
     {
+      "id": "components",
+      "label": "Components",
+      "dir": "../docs/components",
+      "lede": "Every component of the kit with a live preview, the code that produced it, the command to add it and its props.",
+      "groups": [
+        {
+          "name": "Foundation",
+          "tone": "neutral",
+          "items": ["button", "tone-badge", "icon"]
+        },
+        {
+          "name": "Layout",
+          "tone": "brand",
+          "items": ["section-header", "hero", "cta-band", "site-footer"]
+        },
+        {
+          "name": "Content",
+          "tone": "success",
+          "items": ["item-card", "feature-grid", "stat-row", "flow-diagram", "callout", "side-card"]
+        },
+        {
+          "name": "Reference and commands",
+          "tone": "warn",
+          "items": ["reference-table", "command-table", "command-box"]
+        },
+        {
+          "name": "Navigation and page",
+          "tone": "neutral",
+          "items": ["breadcrumbs", "catalog-filter", "page-info"]
+        }
+      ]
+    },
+    {
       "id": "examples",
       "label": "Examples",
       "dir": "../examples",
@@ -107,6 +167,9 @@
     "target": "github-pages",
     "acknowledgePublicPages": false,
     "repositoryVisibility": "public"
+  },
+  "anonymize": {
+    "allow": ["builder.internal", "support@acme.example"]
   },
   "check": {
     "callouts": "off"

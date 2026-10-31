@@ -1,7 +1,14 @@
 import { join } from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 
-const PORT = 4401;
+// 4401 unless E2E_PORT says otherwise, for a second run on the same machine.
+const PORT = Number(process.env.E2E_PORT ?? 4401);
+// The documentation site of this project, built by verify-package, is served on the next port.
+const OWN_PORT = PORT + 1;
+// The same site built with a `nav` and `footer.links`, to check the base on those links, on the port after that.
+const NAV_PORT = PORT + 2;
+// The site that the recipes of "Extending your site" are applied to, built by verify-package, is served on the one after that.
+const RECIPES_PORT = PORT + 3;
 
 export default defineConfig({
   testDir: join(import.meta.dirname, "specs"),
@@ -12,10 +19,30 @@ export default defineConfig({
   use: { baseURL: `http://127.0.0.1:${PORT}`, trace: "on-first-retry" },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   // Serves the site that `npm run verify:package` generated and built, the way GitHub Pages would.
-  webServer: {
-    command: `node e2e/serve.mjs --dist e2e/.build/repo/site/dist --base /widget/ --port ${PORT}`,
-    cwd: join(import.meta.dirname, ".."),
-    url: `http://127.0.0.1:${PORT}/widget/`,
-    reuseExistingServer: !process.env.CI,
-  },
+  webServer: [
+    {
+      command: `node e2e/serve.mjs --dist e2e/.build/repo/site/dist --base /widget/ --port ${PORT}`,
+      cwd: join(import.meta.dirname, ".."),
+      url: `http://127.0.0.1:${PORT}/widget/`,
+      reuseExistingServer: !process.env.CI,
+    },
+    {
+      command: `node e2e/serve.mjs --dist e2e/.build/own-site --base /docs-sitekit/ --port ${OWN_PORT}`,
+      cwd: join(import.meta.dirname, ".."),
+      url: `http://127.0.0.1:${OWN_PORT}/docs-sitekit/`,
+      reuseExistingServer: !process.env.CI,
+    },
+    {
+      command: `node e2e/serve.mjs --dist e2e/.build/nav-site --base /widget/ --port ${NAV_PORT}`,
+      cwd: join(import.meta.dirname, ".."),
+      url: `http://127.0.0.1:${NAV_PORT}/widget/`,
+      reuseExistingServer: !process.env.CI,
+    },
+    {
+      command: `node e2e/serve.mjs --dist e2e/.build/recipes-repo/site/dist --base /recipes/ --port ${RECIPES_PORT}`,
+      cwd: join(import.meta.dirname, ".."),
+      url: `http://127.0.0.1:${RECIPES_PORT}/recipes/`,
+      reuseExistingServer: !process.env.CI,
+    },
+  ],
 });

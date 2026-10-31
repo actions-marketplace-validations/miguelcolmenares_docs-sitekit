@@ -7,6 +7,7 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { applyRecipe } from "./recipes.mjs";
 
 const ROOT = resolve(import.meta.dirname, "..");
 const WORK = join(ROOT, "e2e", ".build");
@@ -127,12 +128,20 @@ check("tarball has the CLI, the template, the registry and the workflow", () => 
     "template/src/infrastructure/codeBlocks.ts",
     "template/src/presentation/code/copyCode.ts",
     "template/src/styles/code.css",
+    "template/scripts/build-tokens.mjs",
     "template/src/presentation/components/site/Hero.astro",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md",
   ]) {
     assert(packedPaths.includes(required), `missing ${required}`);
   }
+});
+check("tarball has no example and no layout that only the project site uses", () => {
+  const bad = packedPaths.filter((path) =>
+    /^template\/src\/(examples|presentation\/layouts\/collections)(\/|$)/.test(path),
+  );
+  assert(bad.length === 0, `unexpected files: ${bad.slice(0, 5).join(", ")}`);
+  assert(packedPaths.includes("template/registry.json"), "the registry is missing");
 });
 check("tarball has no node_modules, build output, dev config or tests", () => {
   const bad = packedPaths.filter((path) =>
@@ -943,6 +952,79 @@ check("fonts are served from the site, with no request to a font host", () => {
   );
 });
 check(
+  "the two fonts of the first screen are preloaded from the site, and the stylesheet uses the same files",
+  () => {
+    const html = read("index.html");
+    const links = [...html.matchAll(/<link rel="preload"[^>]*as="font"[^>]*>/g)].map(
+      (match) => match[0],
+    );
+    assert(links.length === 2, `expected 2 font preloads, found ${links.length}`);
+    const css = listFiles(join(dist, "_astro"))
+      .filter((file) => file.endsWith(".css"))
+      .map((file) => readFileSync(file, "utf8"))
+      .join("\n");
+    const names = [];
+    for (const link of links) {
+      assert(
+        /type="font\/woff2"/.test(link) && /\bcrossorigin\b/.test(link),
+        `a preload without type or crossorigin: ${link}`,
+      );
+      const href = /href="([^"]+)"/.exec(link)?.[1] ?? "";
+      assert(
+        href.startsWith("/widget/_astro/") && href.endsWith(".woff2"),
+        `a preload that is not a file of the site: ${href}`,
+      );
+      assert(existsSync(join(dist, href.slice("/widget/".length))), `${href} is not in the build`);
+      const file = href.split("/").pop();
+      assert(css.includes(file), `${file} is preloaded but the stylesheet does not use it`);
+      names.push(file.replace(/\.[\w-]+\.woff2$/, ""));
+    }
+    assert(
+      names.join() === "geist-latin-wght-normal,geist-mono-latin-wght-normal",
+      `the wrong fonts are preloaded: ${names.join(", ")}`,
+    );
+  },
+);
+check("the fallback faces are in the stylesheet, with their overrides", () => {
+  const css = listFiles(join(dist, "_astro"))
+    .filter((file) => file.endsWith(".css"))
+    .map((file) => readFileSync(file, "utf8"))
+    .join("\n");
+  for (const family of ["Geist Fallback", "Geist Mono Fallback"]) {
+    // The minifier drops the quotes around a family name that is plain words.
+    assert(
+      new RegExp(`font-family:\\s*"?${family}"?[;}]`).test(css),
+      `no @font-face for ${family}`,
+    );
+  }
+  for (const property of [
+    "size-adjust",
+    "ascent-override",
+    "descent-override",
+    "line-gap-override",
+  ]) {
+    assert(css.includes(property), `no ${property} in the stylesheet`);
+  }
+  assert(
+    /--sk-font-sans:\s*"Geist Variable",\s*"Geist Fallback"/.test(css),
+    "the sans stack does not name the fallback",
+  );
+});
+check("the mobile menu is not an island: no framework is downloaded for it", () => {
+  const pages = ["index.html", "docs/getting-started/index.html", "404.html"];
+  for (const page of pages) {
+    const html = read(page);
+    assert(
+      html.includes("data-mobile-menu-open") && /<dialog[^>]*data-mobile-menu/.test(html),
+      `${page} has no mobile menu`,
+    );
+    assert(!/component-url="[^"]*MobileMenu/.test(html), `${page} hydrates the mobile menu`);
+  }
+  const bundles = listFiles(join(dist, "_astro")).filter((file) => file.endsWith(".js"));
+  const heavy = bundles.filter((file) => /MobileMenu/.test(file));
+  assert(heavy.length === 0, `a MobileMenu bundle is in the build: ${heavy.join(", ")}`);
+});
+check(
   "the footer shows the version from package.json, and a rebuild after a release shows the new one",
   () => {
     assert(/>v1\.2\.3</.test(read("index.html")), "the footer does not show v1.2.3");
@@ -1059,6 +1141,313 @@ check("add rejects an unknown component with a way forward", () => {
   assert(/Unknown component "nope".*sitekit list/.test(message), `got: ${message}`);
 });
 
+check(
+  "the generated site has no example and no layout of a collection, and add restores none",
+  () => {
+    for (const path of ["src/examples", "src/presentation/layouts/collections"]) {
+      assert(!existsSync(join(SITE, path)), `the site has ${path}`);
+    }
+    sitekit(["add", "stat-row", "--force"]);
+    assert(!existsSync(join(SITE, "src", "examples")), "add wrote the examples");
+    const page = read("docs/getting-started/index.html");
+    assert(!/data-example|data-preview-theme/.test(page), "a page of the site has a preview");
+    const styles = listFiles(join(dist, "_astro"))
+      .filter((file) => file.endsWith(".css"))
+      .map((file) => readFileSync(file, "utf8"))
+      .join("");
+    assert(!styles.includes("data-preview-theme"), "the site carries the preview themes");
+  },
+);
+
+console.log("5c/6 The documentation site of this project, for the pages of the components");
+// The pages of the components are part of the documentation of this project and not of a generated site, so they are
+// built from the template folder itself, with its own configuration. The browser tests serve this build as well.
+const OWN = join(WORK, "own-site");
+runLoud("npm", ["run", "build", "--", "--outDir", OWN], {
+  cwd: join(ROOT, "template"),
+  env: { ...process.env, ASTRO_TELEMETRY_DISABLED: "1" },
+});
+check("the site of the project has a page for each component that has an example", () => {
+  const registry = JSON.parse(readFileSync(join(ROOT, "template", "registry.json"), "utf8"));
+  const names = Object.entries(registry.components)
+    .filter(([, entry]) => entry.example)
+    .map(([name]) => name);
+  assert(names.length > 0, "no entry points at an example");
+  for (const name of names) {
+    const file = join(OWN, "components", name, "index.html");
+    assert(existsSync(file), `no page for ${name}`);
+    const html = readFileSync(file, "utf8");
+    assert(html.includes("data-example-stage"), `${name} has no preview`);
+    assert(html.includes("code-block"), `${name} has no code block`);
+    assert(html.includes(`npx docs-sitekit add ${name}`), `${name} has no add command`);
+  }
+});
+check("the site of the project makes no request to another host from a component page", () => {
+  const html = readFileSync(join(OWN, "components", "stat-row", "index.html"), "utf8");
+  const hosts = [...html.matchAll(/(?:src|href)="(https?:\/\/[^"]+)"/g)].map((match) => match[1]);
+  const foreign = hosts.filter(
+    (url) => !/^https:\/\/(github\.com\/(miguelcolmenares|demo)|miguelcolmenares\.com)\//.test(url),
+  );
+  assert(foreign.length === 0, `links to: ${foreign.join(", ")}`);
+  assert(!/<script[^>]+src="https?:/.test(html), "a script is loaded from another host");
+});
+
+console.log("5d/6 A generated site with a nav and footer links, for the base on links");
+// The default site has no `nav` and no `footer.links`, and the other specs read its default menu. A second build of the
+// same site, with both keys set, is served on the port after the one of the project site. The config is put back.
+const NAV_SITE = join(WORK, "nav-site");
+const savedConfig = readFileSync(configPath, "utf8");
+const withLinks = JSON.parse(savedConfig);
+withLinks.nav = [
+  { label: "Guide", href: "/docs/getting-started/" },
+  { label: "Written with the base", href: "/widget/tutorials/" },
+  { label: "Blog", href: "https://blog.widget.example" },
+  { label: "Contact", href: "mailto:team@widget.example" },
+  { label: "Top", href: "#main" },
+];
+withLinks.footer = {
+  links: [
+    { label: "Status", href: "/changelog/" },
+    { label: "Footer with the base", href: "/widget/examples/" },
+    { label: "Status page", href: "https://status.widget.example" },
+    { label: "Footer contact", href: "mailto:status@widget.example" },
+  ],
+};
+writeFileSync(configPath, JSON.stringify(withLinks, null, 2));
+try {
+  runLoud("npm", ["run", "build", "--", "--outDir", NAV_SITE], {
+    cwd: SITE,
+    env: { ...process.env, ASTRO_TELEMETRY_DISABLED: "1" },
+  });
+} finally {
+  writeFileSync(configPath, savedConfig);
+}
+check("a path of nav and footer.links gets the base, and the other links are not changed", () => {
+  const html = readFileSync(join(NAV_SITE, "index.html"), "utf8");
+  for (const href of [
+    "/widget/docs/getting-started/",
+    "/widget/tutorials/",
+    "/widget/changelog/",
+    "/widget/examples/",
+    "https://blog.widget.example",
+    "mailto:team@widget.example",
+  ]) {
+    assert(html.includes(`href="${href}"`), `no link to ${href}`);
+  }
+  assert(!html.includes('href="/docs/getting-started/"'), "a nav path was left without the base");
+  assert(!html.includes("/widget/widget/"), "a path that had the base got it twice");
+});
+
+console.log("5e/6 Recipes: extend a site made by init (docs/extend-*.md)");
+// Each recipe of "Extending your site" is a folder in e2e/recipes/, applied here to a site made by `init` and then built,
+// checked and driven by e2e/specs/recipes.spec.ts. The commands a page names are run below with the real CLI.
+const RECIPE_REPO = join(WORK, "recipes-repo");
+const RECIPE_SITE = join(RECIPE_REPO, "site");
+const recipeKit = (args, options = {}) =>
+  run("node", [CLI, ...args], { cwd: RECIPE_REPO, ...options });
+const recipeKitLoose = (args) => capture("node", [CLI, ...args], { cwd: RECIPE_REPO });
+const recipeConfigPath = join(RECIPE_SITE, "sitekit.config.json");
+
+mkdirSync(RECIPE_REPO, { recursive: true });
+run("git", ["init", "-q", "-b", "main"], { cwd: RECIPE_REPO });
+run("git", ["remote", "add", "origin", "https://github.com/demo/recipes.git"], {
+  cwd: RECIPE_REPO,
+});
+write(
+  join(RECIPE_REPO, "package.json"),
+  JSON.stringify({
+    name: "recipes",
+    version: "1.0.0",
+    description: "A project that extends its documentation site.",
+    license: "MIT",
+  }),
+);
+write(
+  join(RECIPE_REPO, "README.md"),
+  "# Recipes\n\nA project that extends its documentation site.\n",
+);
+write(join(RECIPE_REPO, "LICENSE"), "MIT License\n");
+write(
+  join(RECIPE_REPO, "CHANGELOG.md"),
+  "# Changelog\n\n## [1.0.0] - 2026-10-28\n\n### Added\n\n- Everything.\n",
+);
+write(
+  join(RECIPE_REPO, "docs", "getting-started.md"),
+  "# Getting started\n\nInstall the package and use it.\n",
+);
+write(
+  join(RECIPE_REPO, "examples", "basic", "README.md"),
+  "# Basic example\n\nThe smallest example.\n",
+);
+recipeKit(["init"]);
+const recipeConfig = JSON.parse(readFileSync(recipeConfigPath, "utf8"));
+recipeConfig.deploy.repositoryVisibility = "public";
+writeFileSync(recipeConfigPath, `${JSON.stringify(recipeConfig, null, 2)}\n`);
+const manifestBefore =
+  readFileSync(join(RECIPE_SITE, "package.json"), "utf8") +
+  readFileSync(join(RECIPE_SITE, "package-lock.json"), "utf8");
+const commitRecipes = (message) => {
+  gitIn(RECIPE_REPO, ["add", "-A"]);
+  gitIn(RECIPE_REPO, ["commit", "-q", "-m", message], "2026-10-28T12:00:00Z");
+};
+commitRecipes("A site made by init");
+
+const STAT_ROW = join(RECIPE_SITE, "src", "presentation", "components", "site", "StatRow.tsx");
+check(
+  "component: add restores a component that was deleted, and keeps it once you changed it",
+  () => {
+    rmSync(STAT_ROW);
+    assert(/StatRow\.tsx/.test(recipeKit(["add", "stat-row"])), "add did not write StatRow.tsx");
+    assert(
+      readFileSync(STAT_ROW, "utf8").includes("text-fg-bright"),
+      "the restored file is not the kit's",
+    );
+    applyRecipe("component", RECIPE_REPO);
+    const edited = readFileSync(STAT_ROW, "utf8");
+    assert(edited.includes("wrap-anywhere text-brand"), "the change was not applied");
+    const kept = recipeKit(["add", "stat-row"]);
+    assert(/you changed it, kept; use --force to replace/.test(kept), `got: ${kept}`);
+    assert(readFileSync(STAT_ROW, "utf8") === edited, "add overwrote the change");
+  },
+);
+check(
+  "component: sitekit upgrade keeps the edited file and says why, and writes nothing else",
+  () => {
+    commitRecipes("Change StatRow");
+    const output = recipeKit(["upgrade"]);
+    assert(
+      output.includes(
+        "= site/src/presentation/components/site/StatRow.tsx (you changed it, the kit did not, kept)",
+      ),
+      `got: ${output}`,
+    );
+    assert(/0 replaced, 0 added, 1 kept, 0 to merge/.test(output), `got: ${output}`);
+    assert(
+      readFileSync(STAT_ROW, "utf8").includes("wrap-anywhere text-brand"),
+      "upgrade lost the change",
+    );
+    assert(
+      run("git", ["status", "--porcelain"], { cwd: RECIPE_REPO }).trim() === "",
+      "upgrade wrote",
+    );
+  },
+);
+
+for (const name of ["tool-page", "collection", "brand-and-layout", "safe-build", "tokens"]) {
+  applyRecipe(name, RECIPE_REPO);
+}
+check("recipes: they add no dependency to the site", () => {
+  const manifestAfter =
+    readFileSync(join(RECIPE_SITE, "package.json"), "utf8") +
+    readFileSync(join(RECIPE_SITE, "package-lock.json"), "utf8");
+  assert(manifestAfter === manifestBefore, "package.json or package-lock.json changed");
+});
+check("recipes: the merged config is the one of the site, with the keys the recipes add", () => {
+  const merged = JSON.parse(readFileSync(recipeConfigPath, "utf8"));
+  assert(
+    merged.collections.map((c) => c.id).join() === "docs,examples,notes",
+    `collections: ${merged.collections.map((c) => c.id)}`,
+  );
+  assert(merged.stats?.length === 3, `stats: ${JSON.stringify(merged.stats)}`);
+  assert(merged.features?.at(-1)?.icon === "brand:custom/compass", "the custom logo is missing");
+  assert(merged.anonymize?.denyPatterns?.length === 1, "the deny pattern is missing");
+});
+
+check(
+  "tokens: the CSS is out of date until npm run build:tokens, then it follows tokens.json",
+  () => {
+    const stale = capture("npm", ["run", "build:tokens", "--", "--check"], { cwd: RECIPE_SITE });
+    assert(stale.status === 1, `--check exited with ${stale.status}, not 1`);
+    assert(/tokens\.css is out of date/.test(stale.stderr), `got: ${stale.stderr}`);
+    run("npm", ["run", "build:tokens"], { cwd: RECIPE_SITE });
+    const css = readFileSync(join(RECIPE_SITE, "src", "styles", "tokens.css"), "utf8");
+    assert(
+      css.includes("--sk-accent: #2dd4bf;") && css.includes("--sk-accent: #0b5f59;"),
+      "no accent",
+    );
+    run("npm", ["run", "build:tokens", "--", "--check"], { cwd: RECIPE_SITE });
+  },
+);
+check(
+  "tokens: the contrast script passes for the new accent and names the pair of a bad one",
+  () => {
+    const good = run("node", ["scripts/check-contrast.mjs"], { cwd: RECIPE_SITE });
+    assert(/^102 pairs reach the contrast they need\./.test(good), `got: ${good}`);
+    const file = join(RECIPE_SITE, "design", "tokens.json");
+    const original = readFileSync(file, "utf8");
+    try {
+      writeFileSync(
+        file,
+        original.replace('"accent-strong": "#0f766e"', '"accent-strong": "#6d28d9"'),
+      );
+      const bad = capture("node", ["scripts/check-contrast.mjs"], { cwd: RECIPE_SITE });
+      assert(bad.status === 1, `exited with ${bad.status}, not 1`);
+      assert(
+        /dark: accent-strong #6d28d9 on surface-3 #1c1c21 is 2\.39:1/.test(bad.stderr),
+        bad.stderr,
+      );
+    } finally {
+      writeFileSync(file, original);
+    }
+  },
+);
+
+check("collection: a page that no group lists fails check, and says how to fix it", () => {
+  const draft = join(RECIPE_REPO, "notes", "draft.md");
+  writeFileSync(draft, "# Draft\n\nNot in a group yet.\n");
+  const failed = recipeKitLoose(["check"]);
+  rmSync(draft);
+  assert(failed.status === 1, `check exited with ${failed.status}, not 1`);
+  assert(
+    /draft is in no group of "Notes"\. Add it to a group, or remove the groups to sort by name\./.test(
+      failed.stderr,
+    ),
+    failed.stderr,
+  );
+});
+check(
+  "safe build: a pattern of the config makes check fail on a leak, masked, until it is allowed",
+  () => {
+    const page = join(RECIPE_REPO, "docs", "ticket.md");
+    writeFileSync(page, "# Ticket\n\nThe fix is tracked in ACME-1042.\n");
+    const configText = readFileSync(recipeConfigPath, "utf8");
+    try {
+      const failed = recipeKitLoose(["check"]);
+      assert(failed.status === 1, `check exited with ${failed.status}, not 1`);
+      assert(/docs\/ticket\.md: deny-pattern-1 \(high\) "ACM…"/.test(failed.stderr), failed.stderr);
+      assert(!failed.stderr.includes("ACME-1042"), "the match was printed");
+      const allowed = JSON.parse(configText);
+      allowed.anonymize.allow = ["ACME-1042"];
+      writeFileSync(recipeConfigPath, JSON.stringify(allowed, null, 2));
+      assert(/Safe to publish/.test(recipeKit(["check"])), "allow did not accept the text");
+    } finally {
+      writeFileSync(recipeConfigPath, configText);
+      rmSync(page);
+    }
+  },
+);
+check("recipes: check passes on the site with every recipe applied", () => {
+  assert(/Safe to publish/.test(recipeKit(["check"])), "not safe");
+});
+
+runLoud("npm", ["ci", "--no-audit", "--no-fund"], { cwd: RECIPE_SITE });
+runLoud("npm", ["run", "build"], {
+  cwd: RECIPE_SITE,
+  env: { ...process.env, ASTRO_TELEMETRY_DISABLED: "1" },
+});
+check(
+  "recipes: the site builds, passes check --dist, and carries every page of the recipes",
+  () => {
+    const built = (path) => join(RECIPE_SITE, "dist", path, "index.html");
+    for (const path of ["configurator", "notes", "notes/welcome", "examples/basic", "docs"]) {
+      assert(existsSync(built(path)), `missing ${path}`);
+    }
+    assert(
+      /Safe to publish/.test(recipeKit(["check", "--dist", "site/dist"])),
+      "check --dist failed",
+    );
+  },
+);
 console.log("5b/6 Upgrade a site made by the published 0.1.0");
 // The real 0.1.0 from the registry makes a site, and this build upgrades it. Nothing here is a copy:
 // a site made by an older release has to come out building and passing `check`.

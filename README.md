@@ -44,9 +44,9 @@ rebuild the site on every release.
 
 ```yaml
 - uses: actions/checkout@v7
-- uses: miguelcolmenares/docs-sitekit@v0.1.1
+- uses: miguelcolmenares/docs-sitekit@v0.2.0
   with:
-    version: 0.1.1 # the docs-sitekit CLI that runs `check`
+    version: 0.2.0 # the docs-sitekit CLI that runs `check`
 ```
 
 The action installs the site, builds it, runs `sitekit check` on the result, and uploads it as the GitHub Pages artifact. **Deploying stays in
@@ -73,9 +73,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: miguelcolmenares/docs-sitekit@v0.1.1
+      - uses: miguelcolmenares/docs-sitekit@v0.2.0
         with:
-          version: 0.1.1
+          version: 0.2.0
 
   deploy:
     needs: build
@@ -145,7 +145,7 @@ The site is dark by default. A header switch lets the visitor pick the light the
 
 The documentation site is built with this kit. Read it under `docs/`: getting started, components, design tokens, content, deploying.
 
-Every key of `sitekit.config.json`, with its type, default and allowed values, is in the [configuration reference](docs/configuration.md). It is generated from the schema, and a test fails when it is out of date.
+Every key of `sitekit.config.json`, with its type, default and allowed values, is in the [configuration reference](docs/configuration.md). It is generated from the schema, and a test fails when it is out of date. The same keys sorted by topic, with examples, are in [Options by topic](docs/options.md), and [Extending your site](docs/extending.md) has six guides for adding to a generated site (an interactive page, a collection, a changed component, new colors, a logo and a layout, a rule for `check`), each one run as a test.
 
 ## Development
 
@@ -154,7 +154,7 @@ npm run bootstrap      # installs the CLI and the template
 npm test               # unit and integration
 npm run test:e2e       # packs the package, generates a site, builds it, and drives it in a browser
 npm run build:tokens   # regenerate the CSS from template/design/tokens.json
-npm run build:docs     # regenerate docs/configuration.md from the config schema
+npm run build:docs     # regenerate docs/configuration.md and the tables of props of the component pages
 ```
 
 See [AGENTS.md](AGENTS.md) for the layout and the rules.

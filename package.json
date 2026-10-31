@@ -1,6 +1,6 @@
 {
   "name": "docs-sitekit",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Design system and scaffold for documentation microsites on GitHub Pages: Astro, Tailwind, shadcn/ui and lucide-react.",
   "author": "Miguel Colmenares <me@miguelcolmenares.com>",
   "license": "MIT",
@@ -25,6 +25,8 @@
     "!template/dist",
     "!template/.astro",
     "!template/sitekit.config.json",
+    "!template/src/examples",
+    "!template/src/presentation/layouts/collections",
     "README.md",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md"
@@ -46,7 +48,7 @@
     "prepare": "husky",
     "build:tokens": "node scripts/build-tokens.mjs",
     "build:brands": "node scripts/build-brands.mjs",
-    "build:docs": "node scripts/build-docs.mjs",
+    "build:docs": "node scripts/build-docs.mjs && node scripts/build-component-docs.mjs && node scripts/build-recipe-docs.mjs",
     "bootstrap": "npm ci && npm ci --prefix template"
   },
   "keywords": [
