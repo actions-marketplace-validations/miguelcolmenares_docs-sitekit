@@ -1,6 +1,6 @@
 {
   "name": "docs-sitekit",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Design system and scaffold for documentation microsites on GitHub Pages: Astro, Tailwind, shadcn/ui and lucide-react.",
   "author": "Miguel Colmenares <me@miguelcolmenares.com>",
   "license": "MIT",
@@ -25,6 +25,7 @@
     "!template/dist",
     "!template/.astro",
     "!template/sitekit.config.json",
+    "!template/public/social.png",
     "!template/src/examples",
     "!template/src/presentation/layouts/collections",
     "README.md",
