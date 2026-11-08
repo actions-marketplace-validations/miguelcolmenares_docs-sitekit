@@ -49,6 +49,43 @@ The `nav` does not change the footer. The Documentation column of the footer alw
 
 The links go in the Project column of the footer, after the link to the repository and `Report an issue`. They follow the same rule as the `nav`, see [The base on a link](#the-base-on-a-link).
 
+A link of the footer can have an `icon`, drawn before its label. It takes the same values as the `icon` of a feature: a lucide name, `brand:<slug>` for a logo the kit ships, or `brand:custom/<name>` for a logo you add to the `brands` folder, see [Brand logos](./brand-logos.md):
+
+```json title="sitekit.config.json"
+{
+  "footer": {
+    "links": [
+      { "label": "Status", "href": "https://status.acme.example", "icon": "activity" },
+      {
+        "label": "VS Code Marketplace",
+        "href": "https://marketplace.visualstudio.com/items?itemName=acme.tool",
+        "icon": "brand:custom/vscode-marketplace"
+      }
+    ]
+  }
+}
+```
+
+The icon is decoration: the label names the link, so the icon is hidden from assistive technology. A link keeps the height it has, 44 px on a phone, and a link without an `icon` is drawn as before. The `nav` does not take icons: the header menu is text, and a `nav` link with an `icon` fails the build.
+
+A link to another site can open in a new tab with `external: true`. It gets `target="_blank"` and `rel="noopener noreferrer"`, and an arrow after the label, as the link to the repository has:
+
+```json title="sitekit.config.json"
+{
+  "footer": {
+    "links": [
+      {
+        "label": "Marketplace",
+        "href": "https://marketplace.visualstudio.com/items?itemName=acme.tool",
+        "external": true
+      }
+    ]
+  }
+}
+```
+
+The flag is not a default. A web address without `external` opens in the same tab, as it did before, so a site that has such links keeps them as they are. The arrow is decoration too, and it is hidden from assistive technology, so the name of the link is its label. The `nav` has no `external`: a header menu opens its links in the same tab, and a `nav` link with the key fails the build.
+
 ## Collections and groups
 
 ```json title="sitekit.config.json" {8-15}
@@ -103,6 +140,19 @@ The pages in `docs/tutorials/` are then at `/tutorials/<page>/` and are no longe
 
 > [!NOTE]
 > `changelog`, `gallery`, `404` and `_astro` are reserved ids, and two collections cannot share an id. Either one fails the build with the id in the message.
+
+## The sidebars of a docs page
+
+On a desktop a docs page has two sidebars: the docs menu on the left, which lists the pages of its collection, and "On this page" on the right, which lists the headings of the page. The docs menu is shown from `lg` up, and from `xl` on a detail page, where the card takes the right side. "On this page" is not on a detail page, because the card takes its place.
+
+Each sidebar has a button with an icon that hides it, so the text takes its room. The button stays where the sidebar was, as a narrow column, and shows the sidebar again. Its name says what a click does, "Hide the docs menu" or "Show the docs menu", and it has `aria-expanded`. A hidden sidebar is not in the tab order and a screen reader does not read it.
+
+- The choice of each sidebar is kept in the browser, under the keys `docs-menu` and `docs-toc`, and it holds on every page of the site. A script in the head applies it before the first paint, so the layout does not jump.
+- With the sidebars hidden, the text is up to 80 characters wide, where it is 65 with them shown. The line length stays limited, and a wide code block or table gets more room.
+- With storage blocked, the buttons still work and the choice holds on that page only.
+- Without JavaScript both sidebars are shown and there are no buttons. On a phone there are no sidebars and no buttons.
+
+The heading of the page that the reader is in is marked in "On this page", with a line on its left and in the accent color. The mark follows the reader while the page scrolls, and a click on a link or a `#hash` in the address marks that link at once.
 
 ## Where the files are
 

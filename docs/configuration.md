@@ -62,6 +62,17 @@ The top of the home page.
 | `stats[].label` | string | required | any | What the value counts. |
 | `stats[].note` | string | none | any | A line of text under the value. |
 
+## demo
+
+A Markdown sample on the home page, with its source, its preview and the HTML the kit builds from it. Without the key, the section is left out.
+
+| Key | Type | Default | Allowed values | Description |
+| --- | --- | --- | --- | --- |
+| `demo.samples` | array of object | required | - | Three or four samples, one button each. Each is rendered by the same pipeline as a page, at build time. |
+| `demo.samples[].label` | string | required | any | The name of the sample on its button, such as `Heading and list`. |
+| `demo.samples[].title` | string | required | any | The path the sample stands for, such as `docs/getting-started.md`. It is the title of the source block, and the folder of its relative links: a link is rewritten the way it would be in that file. |
+| `demo.samples[].file` | string | required | any | The Markdown file of the sample, relative to the site folder. |
+
 ## nav
 
 | Key | Type | Default | Allowed values | Description |
@@ -76,9 +87,11 @@ The footer of every page.
 
 | Key | Type | Default | Allowed values | Description |
 | --- | --- | --- | --- | --- |
-| `footer.links` | array of object | `[]` | - | Extra links in the Project column of the footer, after the repository and the issues. A path that starts with `/` gets the site base. |
+| `footer.links` | array of object | `[]` | - | Extra links in the Project column of the footer, after the repository and the issues. A path that starts with `/` gets the site base. A link can have an `icon`, drawn before its label, and `external: true` to open in a new tab. |
 | `footer.links[].label` | string | required | any | The text of the link. |
 | `footer.links[].href` | string | required | any | Where the link goes: a path of the site such as `/docs/`, or a full URL. |
+| `footer.links[].icon` | string | none | any | An icon before the label: a lucide icon, `brand:<slug>` for a logo that ships, or `brand:custom/<name>` for your own logo in the `brands` folder. |
+| `footer.links[].external` | boolean | none | `true`, `false` | `true` opens the link in a new tab and draws an arrow after the label, for a link to another site. Left out, the link opens in the same tab. |
 
 ## theme
 

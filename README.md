@@ -44,9 +44,9 @@ rebuild the site on every release.
 
 ```yaml
 - uses: actions/checkout@v7
-- uses: miguelcolmenares/docs-sitekit@v0.2.4
+- uses: miguelcolmenares/docs-sitekit@v0.3.0
   with:
-    version: 0.2.4 # the docs-sitekit CLI that runs `check`
+    version: 0.3.0 # the docs-sitekit CLI that runs `check`
 ```
 
 The action installs the site, builds it, runs `sitekit check` on the result, and uploads it as the GitHub Pages artifact. **Deploying stays in
@@ -73,9 +73,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: miguelcolmenares/docs-sitekit@v0.2.4
+      - uses: miguelcolmenares/docs-sitekit@v0.3.0
         with:
-          version: 0.2.4
+          version: 0.3.0
 
   deploy:
     needs: build
@@ -90,6 +90,9 @@ jobs:
       - id: deployment
         uses: actions/deploy-pages@v5
 ```
+
+`branches` names the default branch of the repository. `sitekit init` writes the branch it finds there, so a repository whose default branch is
+`master` gets `branches: [master]`, and `main` when it finds none.
 
 A release changes the changelog and the version in the footer, which is read from the repository's `package.json` on every build, so rebuilding is
 all it takes. For a package that publishes from a tag, add the same two jobs after the publish job and give the deploy job `needs: [publish, build]`.
